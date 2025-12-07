@@ -1,0 +1,18 @@
+# FastAPI and server
+fastapi==0.109.0
+uvicorn==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# HTTP client
+httpx==0.26.0
+
+# Textual TUI
+textual==0.48.2
+
+# Date/time utilities
+python-dateutil==2.8.2
+
+# Environment variables
+python-dotenv==1.0.0
+sqlmodel==0.0.14
