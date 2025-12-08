@@ -1,152 +1,131 @@
 """Deal health service for identifying overdue and stuck deals."""
 
 from typing import List, Optional
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from ..models import DealBase, OverdueDeal, StuckDeal
-from ..integrations import get_pipedrive_client, get_config
+from ..constants import PIPELINE_NAME_TO_ID, PIPELINE_ID_TO_NAME
+from . import db_queries
 
 
 class DealHealthService:
     """Service for analyzing deal health (overdue, stuck, etc.)."""
     
     def __init__(self):
-        self.pipedrive = get_pipedrive_client()
-        self.config = get_config()
-        self._pipeline_name_cache: dict[int, str] = {}
-        self._stage_name_cache: dict[int, str] = {}
+        pass
     
-    def _parse_datetime(self, value: Optional[str]) -> Optional[datetime]:
-        if not value:
-            return None
-        # Pipedrive returns "YYYY-MM-DD HH:MM:SS" or ISO with Z
-        clean = value.replace("Z", "+00:00") if "Z" in value else value
-        try:
-            return datetime.fromisoformat(clean)
-        except Exception:
-            return None
-
-    async def _get_pipeline_name(self, pipeline_id: Optional[int], default: str) -> str:
-        if pipeline_id is None:
-            return default
-        if pipeline_id not in self._pipeline_name_cache:
-            pipelines = await self.pipedrive.get_pipelines()
-            for p in pipelines:
-                pid = p.get("id")
-                if pid is not None:
-                    self._pipeline_name_cache[pid] = p.get("name", f"Pipeline {pid}")
-        return self._pipeline_name_cache.get(pipeline_id, default)
-
-    async def _get_stage_name(self, stage_id: Optional[int], pipeline_id: Optional[int]) -> str:
-        if stage_id is None:
-            return "Unknown"
-        if stage_id not in self._stage_name_cache:
-            stages = await self.pipedrive.get_stages(pipeline_id=pipeline_id)
-            for s in stages:
-                sid = s.get("id")
-                if sid is not None:
-                    self._stage_name_cache[sid] = s.get("name", f"Stage {sid}")
-        return self._stage_name_cache.get(stage_id, f"Stage {stage_id}")
-
-    async def _dto_to_deal_base(self, dto, default_pipeline_name: str) -> DealBase:
-        """Convert Pipedrive DTO to DealBase with mapped names."""
-        pipeline_name = await self._get_pipeline_name(dto.pipeline_id, default_pipeline_name)
-        stage_name = await self._get_stage_name(dto.stage_id, dto.pipeline_id)
-        owner_name = getattr(dto, "owner_name", None) or "Unknown"
-        org_name = getattr(dto, "org_name", None)
-
+    def _calculate_overdue_days(self, update_time: Optional[datetime]) -> int:
+        """Calculate days since last update."""
+        if not update_time:
+            return 0
+        now = datetime.now(timezone.utc)
+        # Make update_time timezone-aware if it isn't
+        if update_time.tzinfo is None:
+            update_time = update_time.replace(tzinfo=timezone.utc)
+        delta = now - update_time
+        return max(0, delta.days)
+    
+    def _calculate_days_in_stage(self, stage_change_time: Optional[datetime], update_time: Optional[datetime]) -> int:
+        """Calculate days in current stage."""
+        # Prefer stage_change_time, fallback to update_time
+        change_time = stage_change_time or update_time
+        if not change_time:
+            return 0
+        now = datetime.now(timezone.utc)
+        # Make change_time timezone-aware if it isn't
+        if change_time.tzinfo is None:
+            change_time = change_time.replace(tzinfo=timezone.utc)
+        delta = now - change_time
+        return max(0, delta.days)
+    
+    def _get_stage_name(self, stage_id: int) -> str:
+        """Helper to get stage name from ID."""
+        stage = db_queries.get_stage_by_id(stage_id)
+        return stage.name if stage else "Unknown"
+    
+    def _deal_to_deal_base(self, deal) -> DealBase:
+        """Convert Deal SQLModel to DealBase Pydantic model."""
+        pipeline_name = PIPELINE_ID_TO_NAME.get(deal.pipeline_id, f"Pipeline {deal.pipeline_id}")
+        stage_name = self._get_stage_name(deal.stage_id)
+        
+        # Make datetimes timezone-aware if they aren't
+        add_time = deal.add_time
+        if add_time and add_time.tzinfo is None:
+            add_time = add_time.replace(tzinfo=timezone.utc)
+        
+        update_time = deal.update_time
+        if update_time and update_time.tzinfo is None:
+            update_time = update_time.replace(tzinfo=timezone.utc)
+        
+        last_activity_time = deal.last_activity_date
+        if last_activity_time and last_activity_time.tzinfo is None:
+            last_activity_time = last_activity_time.replace(tzinfo=timezone.utc)
+        
         return DealBase(
-            id=dto.id,
-            title=dto.title,
+            id=deal.id,
+            title=deal.title,
             pipeline=pipeline_name,
             stage=stage_name,
-            owner=owner_name,
-            org_name=org_name,
-            value_sar=dto.value,
-            status=dto.status,
-            add_time=self._parse_datetime(dto.add_time),
-            update_time=self._parse_datetime(dto.update_time),
-            last_activity_time=self._parse_datetime(dto.last_activity_date),
+            owner=deal.owner_name or "Unknown",
+            org_name=deal.org_name,
+            value_sar=deal.value,
+            add_time=add_time,
+            update_time=update_time,
+            last_activity_time=last_activity_time,
         )
     
-    async def get_overdue_deals(
+    def get_overdue_deals(
         self,
         pipeline_name: str = "Aramco Projects",
-        min_days: int = 7,limit: int= 500
+        min_days: int = 7
     ) -> List[OverdueDeal]:
-        """Get deals that are overdue."""
-        # Get pipeline ID
-        pipeline_id = await self.pipedrive.get_pipeline_id(pipeline_name)
-        if not pipeline_id:
-            return []
+        """Get deals that are overdue (read from database)."""
+        # Query database (fast!)
+        deals = db_queries.get_overdue_deals_for_pipeline(pipeline_name, min_days)
         
-        # Get all deals in pipeline
-        deals_dto = await self.pipedrive.get_deals(pipeline_id=pipeline_id, status="open", limit=limit)
-        print("pipeline id is ", pipeline_id) 
+        # Transform to API model
         overdue_deals = []
-        now = datetime.now(timezone.utc)
-
-        
-        for dto in deals_dto:
-            if not dto.update_time:
-                continue
+        for deal in deals:
+            deal_base = self._deal_to_deal_base(deal)
+            overdue_days = self._calculate_overdue_days(deal.update_time)
             
-            update_time = self._parse_datetime(dto.update_time)
-            print(dto.update_time)
-            if not update_time:
-                continue
-            days_overdue = (now - update_time).days
-            
-            if days_overdue >= min_days:
-                deal_base = await self._dto_to_deal_base(dto, pipeline_name)
-                overdue_deal = OverdueDeal(
-                    **deal_base.model_dump(),
-                    overdue_days=days_overdue,
-                )
-                overdue_deals.append(overdue_deal)
+            overdue_deal = OverdueDeal(
+                **deal_base.model_dump(),
+                overdue_days=overdue_days,
+            )
+            overdue_deals.append(overdue_deal)
         
         return sorted(overdue_deals, key=lambda d: d.overdue_days, reverse=True)
     
-    async def get_stuck_deals(
+    def get_stuck_deals(
         self,
         pipeline_name: str = "Aramco Projects",
-        min_days: int = 30, limit: int = 500
+        min_days: int = 30
     ) -> List[StuckDeal]:
-        """Get deals stuck in the same stage."""
-        pipeline_id = await self.pipedrive.get_pipeline_id(pipeline_name)
-        if not pipeline_id:
-            return []
+        """Get deals stuck in the same stage (read from database)."""
+        # Query database (fast!)
+        deals = db_queries.get_stuck_deals_for_pipeline(pipeline_name, min_days)
         
-        deals_dto = await self.pipedrive.get_deals(pipeline_id=pipeline_id,status="open",limit=limit)
-        
+        # Transform to API model
         stuck_deals = []
-        now = datetime.now(timezone.utc)
-        
-        for dto in deals_dto:
-            if not dto.update_time:
-                continue
+        for deal in deals:
+            deal_base = self._deal_to_deal_base(deal)
+            days_in_stage = self._calculate_days_in_stage(deal.stage_change_time, deal.update_time)
             
-            update_time = self._parse_datetime(dto.update_time)
-            if not update_time:
-                continue
-            days_in_stage = (now - update_time).days
-            
-            if days_in_stage >= min_days:
-                deal_base = await self._dto_to_deal_base(dto, pipeline_name)
-                stuck_deal = StuckDeal(
-                    **deal_base.model_dump(),
-                    days_in_stage=days_in_stage,
-                )
-                stuck_deals.append(stuck_deal)
+            stuck_deal = StuckDeal(
+                **deal_base.model_dump(),
+                days_in_stage=days_in_stage,
+            )
+            stuck_deals.append(stuck_deal)
         
         return sorted(stuck_deals, key=lambda d: d.days_in_stage, reverse=True)
     
-    async def get_deal_detail(self, deal_id: int) -> Optional[DealBase]:
-        """Get detailed information for a single deal."""
-        dto = await self.pipedrive.get_deal(deal_id)
+    def get_deal_detail(self, deal_id: int) -> Optional[DealBase]:
+        """Get detailed information for a single deal (read from database)."""
+        deal = db_queries.get_deal_by_id(deal_id)
         
-        if dto:
-            return await self._dto_to_deal_base(dto, "Aramco Projects")
+        if deal:
+            return self._deal_to_deal_base(deal)
         
         return None
 

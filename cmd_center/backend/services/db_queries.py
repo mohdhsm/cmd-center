@@ -1,24 +1,75 @@
 """Read helpers for the SQLite cache to support fast TUI loads."""
 
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 
-from ..db import engine, Deal
+from ..db import engine, Pipeline, Stage, Deal, Note, SyncMetadata
 from ..constants import PIPELINE_NAME_TO_ID
 
+# =============================================================================
+# Pipeline & Stage Queries
+# =============================================================================
+
+def get_pipeline_by_name(name: str) -> Optional[Pipeline]:
+    """Get a pipeline by name."""
+    with Session(engine) as session:
+        return session.exec(
+            select(Pipeline).where(Pipeline.name == name)
+        ).first()
+
+
+def get_stage_by_id(stage_id: int) -> Optional[Stage]:
+    """Get a stage by ID."""
+    with Session(engine) as session:
+        return session.exec(
+            select(Stage).where(Stage.id == stage_id)
+        ).first()
+
+
+def get_stages_for_pipeline(pipeline_id: int) -> list[Stage]:
+    """Get all stages for a pipeline."""
+    with Session(engine) as session:
+        return list(session.exec(
+            select(Stage)
+            .where(Stage.pipeline_id == pipeline_id)
+            .order_by(Stage.order_nr)
+        ).all())
+
+# =============================================================================
+# Deal Queries
+# =============================================================================
 
 def get_open_deals_for_pipeline(pipeline_name: str) -> List[Deal]:
+    """Get all open deals for a pipeline by name."""
     pipeline_id = PIPELINE_NAME_TO_ID.get(pipeline_name)
     if not pipeline_id:
         return []
     with Session(engine) as session:
         stmt = select(Deal).where(Deal.pipeline_id == pipeline_id).where(Deal.status == "open")
-        return session.exec(stmt).all()
+        return list(session.exec(stmt).all())
+
+
+def get_deals_for_pipeline(
+    pipeline_id: int,
+    status: str = "open"
+) -> list[Deal]:
+    """Get all deals for a pipeline."""
+    with Session(engine) as session:
+        return list(session.exec(
+            select(Deal)
+            .where(Deal.pipeline_id == pipeline_id)
+            .where(Deal.status == status)
+        ).all())
 
 
 def get_overdue_deals_for_pipeline(pipeline_name: str, min_days: int = 7) -> List[Deal]:
+    """
+    Get deals that haven't been updated in `min_days` days.
+    
+    "Overdue" = update_time is older than the threshold.
+    """
     pipeline_id = PIPELINE_NAME_TO_ID.get(pipeline_name)
     if not pipeline_id:
         return []
@@ -29,11 +80,17 @@ def get_overdue_deals_for_pipeline(pipeline_name: str, min_days: int = 7) -> Lis
             .where(Deal.pipeline_id == pipeline_id)
             .where(Deal.status == "open")
             .where(Deal.update_time < cutoff)
+            .order_by(Deal.update_time)
         )
-        return session.exec(stmt).all()
+        return list(session.exec(stmt).all())
 
 
 def get_stuck_deals_for_pipeline(pipeline_name: str, min_days: int = 30) -> List[Deal]:
+    """
+    Get deals that have been in the same stage for `min_days` days.
+    
+    Uses stage_change_time if available, otherwise falls back to update_time.
+    """
     pipeline_id = PIPELINE_NAME_TO_ID.get(pipeline_name)
     if not pipeline_id:
         return []
@@ -43,13 +100,220 @@ def get_stuck_deals_for_pipeline(pipeline_name: str, min_days: int = 30) -> List
             select(Deal)
             .where(Deal.pipeline_id == pipeline_id)
             .where(Deal.status == "open")
-            .where(Deal.update_time < cutoff)
+            .where(
+                # Prefer stage_change_time, fallback to update_time
+                func.coalesce(Deal.stage_change_time, Deal.update_time) < cutoff
+            )
+            .order_by(func.coalesce(Deal.stage_change_time, Deal.update_time))
         )
-        return session.exec(stmt).all()
+        return list(session.exec(stmt).all())
+
+
+def get_deals_by_stage(
+    pipeline_id: int,
+    stage_name: str,
+    min_days_in_stage: int = 0
+) -> list[Deal]:
+    """Get deals in a specific stage, optionally filtered by days in stage."""
+    with Session(engine) as session:
+        stage = session.exec(
+            select(Stage)
+            .where(Stage.pipeline_id == pipeline_id)
+            .where(Stage.name == stage_name)
+        ).first()
+        
+        if not stage:
+            return []
+        
+        query = (
+            select(Deal)
+            .where(Deal.pipeline_id == pipeline_id)
+            .where(Deal.stage_id == stage.id)
+            .where(Deal.status == "open")
+        )
+        
+        if min_days_in_stage > 0:
+            cutoff = datetime.utcnow() - timedelta(days=min_days_in_stage)
+            query = query.where(
+                func.coalesce(Deal.stage_change_time, Deal.update_time) < cutoff
+            )
+        
+        return list(session.exec(query).all())
+
+
+def get_deals_by_owner(
+    owner_name: str,
+    pipeline_ids: Optional[list[int]] = None,
+    status: str = "open"
+) -> list[Deal]:
+    """Get all deals for a specific owner."""
+    with Session(engine) as session:
+        query = (
+            select(Deal)
+            .where(Deal.owner_name == owner_name)
+            .where(Deal.status == status)
+        )
+        
+        if pipeline_ids:
+            query = query.where(Deal.pipeline_id.in_(pipeline_ids))
+        
+        return list(session.exec(query).all())
+
+
+def get_deal_by_id(deal_id: int) -> Optional[Deal]:
+    """Get a single deal by ID."""
+    with Session(engine) as session:
+        return session.exec(
+            select(Deal).where(Deal.id == deal_id)
+        ).first()
+
+
+def get_deals_near_invoicing(
+    pipeline_id: int,
+    stage_names: list[str]
+) -> list[Deal]:
+    """Get deals in stages that are close to invoicing."""
+    with Session(engine) as session:
+        # Get stage IDs for the given names
+        stages = session.exec(
+            select(Stage)
+            .where(Stage.pipeline_id == pipeline_id)
+            .where(Stage.name.in_(stage_names))
+        ).all()
+        
+        stage_ids = [s.id for s in stages]
+        
+        if not stage_ids:
+            return []
+        
+        return list(session.exec(
+            select(Deal)
+            .where(Deal.pipeline_id == pipeline_id)
+            .where(Deal.stage_id.in_(stage_ids))
+            .where(Deal.status == "open")
+        ).all())
+
+
+def search_deals(
+    query: str,
+    pipeline_id: Optional[int] = None,
+    owner_name: Optional[str] = None,
+    limit: int = 50
+) -> list[Deal]:
+    """Search deals by title or org name."""
+    with Session(engine) as session:
+        stmt = (
+            select(Deal)
+            .where(Deal.status == "open")
+            .where(
+                (Deal.title.ilike(f"%{query}%")) |
+                (Deal.org_name.ilike(f"%{query}%"))
+            )
+        )
+        
+        if pipeline_id:
+            stmt = stmt.where(Deal.pipeline_id == pipeline_id)
+        
+        if owner_name:
+            stmt = stmt.where(Deal.owner_name == owner_name)
+        
+        stmt = stmt.limit(limit)
+        
+        return list(session.exec(stmt).all())
+
+# =============================================================================
+# Note Queries
+# =============================================================================
+
+def get_notes_for_deal(deal_id: int) -> list[Note]:
+    """Get all notes for a deal, ordered by date."""
+    with Session(engine) as session:
+        return list(session.exec(
+            select(Note)
+            .where(Note.deal_id == deal_id)
+            .order_by(Note.add_time)
+        ).all())
+
+# =============================================================================
+# Aggregation Queries
+# =============================================================================
+
+def get_deal_counts_by_owner(
+    pipeline_ids: Optional[list[int]] = None,
+    status: str = "open"
+) -> dict[str, int]:
+    """Get deal counts grouped by owner."""
+    with Session(engine) as session:
+        query = (
+            select(Deal.owner_name, func.count(Deal.id))
+            .where(Deal.status == status)
+            .where(Deal.owner_name.isnot(None))
+            .group_by(Deal.owner_name)
+        )
+        
+        if pipeline_ids:
+            query = query.where(Deal.pipeline_id.in_(pipeline_ids))
+        
+        results = session.exec(query).all()
+        return {owner: count for owner, count in results}
+
+
+def get_deal_value_by_owner(
+    pipeline_ids: Optional[list[int]] = None,
+    status: str = "open"
+) -> dict[str, float]:
+    """Get total deal value grouped by owner."""
+    with Session(engine) as session:
+        query = (
+            select(Deal.owner_name, func.sum(Deal.value))
+            .where(Deal.status == status)
+            .where(Deal.owner_name.isnot(None))
+            .group_by(Deal.owner_name)
+        )
+        
+        if pipeline_ids:
+            query = query.where(Deal.pipeline_id.in_(pipeline_ids))
+        
+        results = session.exec(query).all()
+        return {owner: value or 0.0 for owner, value in results}
+
+# =============================================================================
+# Sync Status Queries
+# =============================================================================
+
+def get_sync_status() -> list[SyncMetadata]:
+    """Get sync status for all entity types."""
+    with Session(engine) as session:
+        return list(session.exec(
+            select(SyncMetadata).order_by(SyncMetadata.entity_type)
+        ).all())
+
+
+def get_last_sync_time(entity_type: str) -> Optional[datetime]:
+    """Get the last sync time for a specific entity type."""
+    with Session(engine) as session:
+        meta = session.exec(
+            select(SyncMetadata).where(SyncMetadata.entity_type == entity_type)
+        ).first()
+        return meta.last_sync_time if meta else None
 
 
 __all__ = [
+    "get_pipeline_by_name",
+    "get_stage_by_id",
+    "get_stages_for_pipeline",
     "get_open_deals_for_pipeline",
+    "get_deals_for_pipeline",
     "get_overdue_deals_for_pipeline",
     "get_stuck_deals_for_pipeline",
+    "get_deals_by_stage",
+    "get_deals_by_owner",
+    "get_deal_by_id",
+    "get_deals_near_invoicing",
+    "search_deals",
+    "get_notes_for_deal",
+    "get_deal_counts_by_owner",
+    "get_deal_value_by_owner",
+    "get_sync_status",
+    "get_last_sync_time",
 ]

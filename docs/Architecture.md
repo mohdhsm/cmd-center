@@ -416,14 +416,14 @@ All services:
 
 | Entity | Initial Sync | Periodic Sync | Notes |
 |--------|--------------|---------------|-------|
-| Pipelines | All | Daily | Rarely changes |
-| Stages | All | Daily | Rarely changes |
+| Pipelines | All | weekly | Rarely changes |
+| Stages | All | weekly | Rarely changes |
 | Deals (open) | All | Every 30 min | Core data |
 | Deals (won/lost) | Skip | Skip | Not needed for active management |
 | Notes | None | On-demand | Too many to bulk sync |
 
 ### 8.3 Incremental Sync Logic
-
+TODO: Add the get deals updated after and change this logic
 ```python
 async def sync_deals_incremental(pipeline_id: int):
     """Sync only deals updated since last sync."""
@@ -482,7 +482,7 @@ scheduler.start()
 |--------|---------|---------|
 | `pipedrive_client` | `pipedrive_sync.py` only | Fetch data from Pipedrive API |
 | `llm_client` | `llm_analysis_service` | Send prompts, parse JSON responses |
-| `email_client` | `email_service` | Send SMTP emails |
+| `email_client` | `email_service` | sync using exchange server |
 
 ---
 
