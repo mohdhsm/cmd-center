@@ -260,6 +260,19 @@ async def sync_deals_for_pipeline(
                     stage_change_time=_parse_datetime(d.get("stage_change_time")),
                     expected_close_date=_parse_datetime(d.get("expected_close_date")),
                     last_activity_date=_parse_datetime(d.get("last_activity_date")),
+                    next_activity_date=_parse_datetime(d.get("next_activity_date")),
+                    next_activity_id=d.get("next_activity_id"),
+                    lost_reason=d.get("lost_reason"),
+                    close_time=_parse_datetime(d.get("close_time")),
+                    won_time=_parse_datetime(d.get("won_time")),
+                    lost_time=_parse_datetime(d.get("lost_time")),
+                    file_count=d.get("files_count", 0),
+                    notes_count=d.get("notes_count", 0),
+                    email_messages_count=d.get("email_messages_count", 0),
+                    activities_count=d.get("activities_count", 0),
+                    done_activities_count=d.get("done_activities_count", 0),
+                    last_incoming_mail_time=_parse_datetime(d.get("last_incoming_mail_time")),
+                    last_outgoing_mail_time=_parse_datetime(d.get("last_outgoing_mail_time")),
                     raw_json=json.dumps(d),
                 )
                 session.merge(deal)
@@ -301,12 +314,14 @@ async def sync_notes_for_deal(deal_id: int) -> int:
                 user = n.get("user") or {}
                 note = Note(
                     id=n["id"],
-                    deal_id=n["deal_id"],
+                    deal_id=n.get("deal_id"),
+                    active_flag=n.get("active_flag", True),
                     user_name=user.get("name") if isinstance(user, dict) else None,
                     user_id=user.get("id") if isinstance(user, dict) else None,
                     content=n.get("content", ""),
                     add_time=_parse_datetime(n.get("add_time")),
                     update_time=_parse_datetime(n.get("update_time")),
+                    lead_id=n.get("lead_id"),
                 )
                 session.merge(note)
             session.commit()

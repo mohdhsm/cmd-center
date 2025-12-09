@@ -156,18 +156,52 @@ class DealNote(BaseModel):
     content: str
 ```
 
-If you later need activities, you may define:
+### 4.2 DealActivity
+
+Used for tracking activities associated with deals.
 
 ```python
 class DealActivity(BaseModel):
     id: int
+    deal_id: int
     type: str
     subject: Optional[str] = None
+    note: Optional[str] = None
     due_date: Optional[datetime] = None
-    done: Optional[bool] = None
+    due_time: Optional[str] = None
+    done: bool = False
+    mark_as_done_time: Optional[datetime] = None
+    add_time: Optional[datetime] = None
 ```
 
-(Activities are optional for MVP.)
+### 4.3 DealFile
+
+Used for file attachments associated with deals.
+
+```python
+class DealFile(BaseModel):
+    id: int
+    deal_id: int
+    file_name: Optional[str] = None
+    file_type: Optional[str] = None
+    file_size: Optional[int] = None
+    file_url: Optional[str] = None
+    add_time: Optional[datetime] = None
+```
+
+### 4.4 DealComment
+
+Used for comments on deals and other objects.
+
+```python
+class DealComment(BaseModel):
+    id: int
+    object_id: int
+    object_type: str  # e.g., "deal", "activity"
+    content: Optional[str] = None
+    add_time: Optional[datetime] = None
+    user_id: Optional[int] = None
+```
 
 ---
 
@@ -325,7 +359,7 @@ Service layer then maps `PipedriveDealDTO` → `DealBase` or specialized models.
 These models should be placed in `backend/models/`:
 
 - `deal_models.py`
-  - `DealBase`, `OverdueDeal`, `StuckDeal`, `OrderReceivedAnalysis`, `ComplianceStatus`, `DealSummary`, `DealNote`, `DealSearchResult`
+  - `DealBase`, `OverdueDeal`, `StuckDeal`, `OrderReceivedAnalysis`, `ComplianceStatus`, `DealSummary`, `DealNote`, `DealActivity`, `DealFile`, `DealComment`, `DealSearchResult`
 - `cashflow_models.py`
   - `CashflowBucket`
 - `kpi_models.py`

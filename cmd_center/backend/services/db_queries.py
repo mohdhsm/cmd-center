@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from sqlmodel import Session, select, func
 
-from ..db import engine, Pipeline, Stage, Deal, Note, SyncMetadata
+from ..db import engine, Pipeline, Stage, Deal, Note, Activity, File, Comment, SyncMetadata
 from ..constants import PIPELINE_NAME_TO_ID
 
 # =============================================================================
@@ -235,6 +235,64 @@ def get_notes_for_deal(deal_id: int) -> list[Note]:
         ).all())
 
 # =============================================================================
+# Activity Queries
+# =============================================================================
+
+def get_activities_for_deal(deal_id: int) -> list[Activity]:
+    """Get all activities for a deal, ordered by date."""
+    with Session(engine) as session:
+        return list(session.exec(
+            select(Activity)
+            .where(Activity.deal_id == deal_id)
+            .where(Activity.active_flag == True)
+            .order_by(Activity.add_time)
+        ).all())
+
+
+def get_pending_activities_for_deal(deal_id: int) -> list[Activity]:
+    """Get pending (not done) activities for a deal."""
+    with Session(engine) as session:
+        return list(session.exec(
+            select(Activity)
+            .where(Activity.deal_id == deal_id)
+            .where(Activity.active_flag == True)
+            .where(Activity.done == False)
+            .order_by(Activity.due_date)
+        ).all())
+
+
+# =============================================================================
+# File Queries
+# =============================================================================
+
+def get_files_for_deal(deal_id: int) -> list[File]:
+    """Get all files for a deal."""
+    with Session(engine) as session:
+        return list(session.exec(
+            select(File)
+            .where(File.deal_id == deal_id)
+            .where(File.active_flag == True)
+            .order_by(File.add_time)
+        ).all())
+
+
+# =============================================================================
+# Comment Queries
+# =============================================================================
+
+def get_comments_for_object(object_id: int, object_type: str) -> list[Comment]:
+    """Get all comments for a specific object (deal, activity, etc.)."""
+    with Session(engine) as session:
+        return list(session.exec(
+            select(Comment)
+            .where(Comment.object_id == object_id)
+            .where(Comment.object_type == object_type)
+            .where(Comment.active_flag == True)
+            .order_by(Comment.add_time)
+        ).all())
+
+
+# =============================================================================
 # Aggregation Queries
 # =============================================================================
 
@@ -312,6 +370,10 @@ __all__ = [
     "get_deals_near_invoicing",
     "search_deals",
     "get_notes_for_deal",
+    "get_activities_for_deal",
+    "get_pending_activities_for_deal",
+    "get_files_for_deal",
+    "get_comments_for_object",
     "get_deal_counts_by_owner",
     "get_deal_value_by_owner",
     "get_sync_status",

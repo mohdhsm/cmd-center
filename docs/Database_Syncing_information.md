@@ -161,12 +161,25 @@ class Deal(SQLModel, table=True):
     value: float = 0.0
     currency: str = "SAR"
     status: str = Field(default="open", index=True)  # "open", "won", "lost"
-    add_time: Optional[datetime] = None
+    add_time: [datetime] = None
     update_time: Optional[datetime] = Field(default=None, index=True)
     stage_change_time: Optional[datetime] = None
     expected_close_date: Optional[datetime] = None
     last_activity_date: Optional[datetime] = None
-    
+    next_activity_date: Optional[datetime] = None
+    next_activity_id: Optional[int] = None
+    lost_reason: Optional[str] = None
+    close_time: Optional[datetime] = None
+    won_time: Optional[datetime] = None
+    lost_time: Optional[datetime]=None
+    file_count: int = 0
+    notes_count: int = 0
+    email_messages_count: int = 0
+    activities_count: int = 0
+    done_activities_count: int = 0
+    last_incoming_mail_time: Optional[datetime] = None
+    last_outgoing_mail_time: Optional[datetime] = None
+
     # Store full JSON for debugging or accessing unmapped fields
     raw_json: Optional[str] = None
 
@@ -175,11 +188,69 @@ class Note(SQLModel, table=True):
     """Deal note for LLM analysis."""
     id: int = Field(primary_key=True)
     deal_id: int = Field(index=True)
+    active_flag = bool = True
     user_name: Optional[str] = None
     user_id: Optional[int] = None
     content: str
     add_time: Optional[datetime] = None
     update_time: Optional[datetime] = None
+    lead_id: Optional[int] = None
+
+class Activity(SQLModel, table=True):
+    """Deal activity record from pipedrive for LLM analysis and view"""
+    id: int = Field(primary_key=True)
+    deal_id: int = Field(index=True)
+    active_flag = bool = True
+    user_name: Optional[str] = None
+    owner_id: int = None
+    subject: Optional[str] = None
+    activity_type: Optional[str] = None
+    content: str
+    due_date: Optional[datetime] = None
+    due_time: Optional[datetime] = None
+    done: bool = False
+    mark_as_done_time: Optional[datetime] = None
+    add_time: Optional[datetime] = None
+    update_time: Optional[datetime] = None
+    lead_id: Optional[int] = None
+
+class File(SQLModel, table=True):
+    """Deal file for LLM analysis and to downloa."""
+    id: int = Field(primary_key=True)
+    deal_id: int = Field(index=True)
+    user_id: int = None
+    activity_id: Optional[int] = None
+    person_id: Optional[int] = None
+    org_id: Optional[int] = None
+    lead_id: Optional[str] =
+    add_time: Optional[datetime] = None
+    update_time: Optional[datetime] = None
+    file_name: str = None
+    file_type: str = None
+    file_size: Optional[int] = None
+    file_url: Optional[str] = None
+    file_nickname: Optional[str] = None
+    remote_location: Optional[str] = None
+    remote_id: Optional[str] = None
+    active_flag: bool = True
+    file_size: int = None
+    deal_name: Optional[str] = None
+    
+
+
+class Comment(SQLModel, table=True):
+    """Deal comment record for LLM analysis from pipedrive."""
+    id: int = Field(primary_key=True)
+    active_flag = bool = True
+    add_time: Optional[datetime] = None
+    update_time: Optional[datetime] = None
+    content: Optional[str] = None
+    object_id: Optional[int] = None
+    object_type: Optional[str] = None
+    updater_id: Optional[int] = None
+    user_id: int = None
+
+
 
 
 # =============================================================================
