@@ -8,6 +8,9 @@ from .deal_models import (
     ComplianceStatus,
     DealSummary,
     DealNote,
+    DealActivity,
+    DealFile,
+    DealComment,
     DealSearchResult,
 )
 from .cashflow_models import CashflowBucket
@@ -23,6 +26,9 @@ __all__ = [
     "ComplianceStatus",
     "DealSummary",
     "DealNote",
+    "DealActivity",
+    "DealFile",
+    "DealComment",
     "DealSearchResult",
     "CashflowBucket",
     "OwnerKPI",

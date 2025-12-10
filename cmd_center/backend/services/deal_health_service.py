@@ -61,6 +61,10 @@ class DealHealthService:
         if last_activity_time and last_activity_time.tzinfo is None:
             last_activity_time = last_activity_time.replace(tzinfo=timezone.utc)
         
+        next_activity_date = deal.next_activity_date
+        if next_activity_date and next_activity_date.tzinfo is None:
+            next_activity_date = next_activity_date.replace(tzinfo=timezone.utc)
+        
         return DealBase(
             id=deal.id,
             title=deal.title,
@@ -72,6 +76,12 @@ class DealHealthService:
             add_time=add_time,
             update_time=update_time,
             last_activity_time=last_activity_time,
+            next_activity_date=next_activity_date,
+            file_count=deal.file_count,
+            notes_count=deal.notes_count,
+            activities_count=deal.activities_count,
+            done_activities_count=deal.done_activities_count,
+            email_messages_count=deal.email_messages_count,
         )
     
     def get_overdue_deals(

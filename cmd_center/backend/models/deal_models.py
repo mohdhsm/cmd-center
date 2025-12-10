@@ -25,6 +25,14 @@ class DealBase(BaseModel):
     add_time: Optional[datetime] = None
     update_time: Optional[datetime] = None
     last_activity_time: Optional[datetime] = None
+    next_activity_date: Optional[datetime] = None
+    
+    # Counts for quick overview
+    file_count: int = 0
+    notes_count: int = 0
+    activities_count: int = 0
+    done_activities_count: int = 0
+    email_messages_count: int = 0
 
 
 class OverdueDeal(DealBase):
@@ -70,6 +78,44 @@ class DealNote(BaseModel):
     date: datetime
     author: Optional[str] = None
     content: str
+
+
+class DealActivity(BaseModel):
+    """Activity associated with a deal."""
+    
+    id: int
+    deal_id: int
+    type: str
+    subject: Optional[str] = None
+    note: Optional[str] = None
+    due_date: Optional[datetime] = None
+    due_time: Optional[str] = None
+    done: bool = False
+    mark_as_done_time: Optional[datetime] = None
+    add_time: Optional[datetime] = None
+
+
+class DealFile(BaseModel):
+    """File attachment associated with a deal."""
+    
+    id: int
+    deal_id: int
+    file_name: Optional[str] = None
+    file_type: Optional[str] = None
+    file_size: Optional[int] = None
+    file_url: Optional[str] = None
+    add_time: Optional[datetime] = None
+
+
+class DealComment(BaseModel):
+    """Comment on a deal or other object."""
+    
+    id: int
+    object_id: int
+    object_type: str  # e.g., "deal", "activity"
+    content: Optional[str] = None
+    add_time: Optional[datetime] = None
+    user_id: Optional[int] = None
 
 
 class DealSearchResult(DealBase):
