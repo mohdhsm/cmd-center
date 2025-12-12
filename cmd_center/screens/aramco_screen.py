@@ -96,7 +96,7 @@ class AramcoPipelineScreen(Screen):
             table.add_columns("ID", "Title", "Owner", "Stage", "Days in stage", "Last activity")
             endpoint = "/aramco/stuck"
         elif self.current_mode == "order":
-            table.add_columns("ID", "Title", "Owner", "Days in stage", "End user?", "# requests")
+            table.add_columns("ID", "Title", "Owner", "stage","Days in stage")
             endpoint = "/aramco/order_received"
         elif self.current_mode == "compliance":
             table.add_columns("ID", "Title", "Stage", "Survey?", "Quality docs?", "Comment")
@@ -129,6 +129,14 @@ class AramcoPipelineScreen(Screen):
                         item["stage"],
                         str(item["days_in_stage"]),
                         str(item.get("last_activity_time", "N/A")),
+                    )
+                elif self.current_mode == "order":
+                    table.add_row(
+                        str(item["id"]),
+                        item["title"],
+                        item["owner"],
+                        item["stage"],
+                        str(item["days_in_stage"]),
                     )
                 # Add other modes similarly...
         

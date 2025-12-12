@@ -13,5 +13,7 @@ router = APIRouter()
 async def get_dashboard_today():
     """Get today's focus dashboard items."""
     service = get_dashboard_service()
-    items = await service.get_dashboard_items()
+    # items = await service.get_dashboard_items()
+    # Disabled it for the mean time for testing until implemented
+    items = []
     return items

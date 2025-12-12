@@ -3,9 +3,11 @@
 from typing import List, Optional
 from datetime import datetime, timezone
 
-from ..models import DealBase, OverdueDeal, StuckDeal
+from ..models import DealBase, OverdueDeal, StuckDeal, OrderReceivedAnalysis
 from ..constants import PIPELINE_NAME_TO_ID, PIPELINE_ID_TO_NAME
 from . import db_queries
+from sqlmodel import Session, select
+from ..db import Deal
 
 
 class DealHealthService:
@@ -129,7 +131,44 @@ class DealHealthService:
             stuck_deals.append(stuck_deal)
         
         return sorted(stuck_deals, key=lambda d: d.days_in_stage, reverse=True)
-    
+
+    def get_order_received_deals(
+        self,
+        pipeline_name: str = "Aramco Projects"
+    ) -> List[OrderReceivedAnalysis]:
+        """Get deals in Order Received stages (read from database)."""
+        pipeline_id = PIPELINE_NAME_TO_ID.get(pipeline_name)
+        if not pipeline_id:
+            return []
+
+        # Stage IDs for Order Received stages
+        order_received_stage_ids = [27, 28, 29, 45]  # Order Received, Approved, Awaiting Payment, Everything is read but not started
+
+        # Query database for deals in these stages (similar to get_deals_near_invoicing)
+        with Session(db_queries.engine) as session:
+            deals = list(session.exec(
+                select(Deal)
+                .where(Deal.pipeline_id == pipeline_id)
+                .where(Deal.stage_id.in_(order_received_stage_ids))
+                .where(Deal.status == "open")
+            ).all())
+
+        # Transform to API model
+        order_received_deals = []
+        for deal in deals:
+            deal_base = self._deal_to_deal_base(deal)
+            days_in_stage = self._calculate_days_in_stage(deal.stage_change_time, deal.update_time)
+
+            order_received_deal = OrderReceivedAnalysis(
+                **deal_base.model_dump(),
+                days_in_stage=days_in_stage,
+                end_user_identified=None,  # Would be set by LLM analysis
+                end_user_requests_count=None,  # Would be set by LLM analysis
+            )
+            order_received_deals.append(order_received_deal)
+
+        return sorted(order_received_deals, key=lambda d: d.days_in_stage, reverse=True)
+
     def get_deal_detail(self, deal_id: int) -> Optional[DealBase]:
         """Get detailed information for a single deal (read from database)."""
         deal = db_queries.get_deal_by_id(deal_id)

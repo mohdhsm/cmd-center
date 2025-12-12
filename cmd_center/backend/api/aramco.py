@@ -30,16 +30,17 @@ async def get_aramco_stuck_deals(min_days: int = Query(30, ge=1)):
 @router.get("/order_received", response_model=List[OrderReceivedAnalysis])
 async def get_aramco_order_received(min_days: int = Query(30, ge=1)):
     """Get and analyze deals in 'Order received' stage."""
-    service = get_llm_analysis_service()
-    deals = await service.analyze_order_received("Aramco Projects", min_days=min_days)
+    service = get_deal_health_service()
+    deals = service.get_order_received_deals("Aramco Projects")
     return deals
 
 
 @router.get("/compliance", response_model=List[ComplianceStatus])
 async def get_aramco_compliance():
     """Get compliance status for Aramco deals."""
-    service = get_llm_analysis_service()
-    deals = await service.analyze_compliance("Aramco Projects")
+   # service = get_llm_analysis_service()
+   # deals = await service.analyze_compliance("Aramco Projects")
+    deals = []
     return deals
 
 
@@ -49,10 +50,11 @@ async def get_aramco_cashflow_projection(
     periods_ahead: int = Query(12, ge=1, le=52),
 ):
     """Get cashflow projection for Aramco pipeline."""
-    service = get_cashflow_service()
-    buckets = await service.get_cashflow_projection(
-        "Aramco Projects",
-        period_type=period_type,
-        weeks_ahead=periods_ahead,
-    )
+#     service = get_cashflow_service()
+    # buckets = await service.get_cashflow_projection(
+        # "Aramco Projects",
+        # period_type=period_type,
+        # weeks_ahead=periods_ahead,
+    # )
+    buckets = []
     return buckets
