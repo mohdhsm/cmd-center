@@ -23,8 +23,8 @@ class EmailService:
     ) -> List[EmailDraft]:
         """Generate follow-up emails for overdue/stuck deals."""
         # Get overdue deals
-        aramco_overdue = await self.deal_health.get_overdue_deals("Aramco Projects", min_days=7)
-        commercial_overdue = await self.deal_health.get_overdue_deals("pipeline", min_days=7)
+        aramco_overdue = self.deal_health.get_overdue_deals("Aramco Projects", min_days=7)
+        commercial_overdue = self.deal_health.get_overdue_deals("pipeline", min_days=7)
         
         # Get compliance issues
         compliance_issues = await self.llm_analysis.analyze_compliance("Aramco Projects")

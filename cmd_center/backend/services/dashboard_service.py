@@ -30,7 +30,7 @@ class DashboardService:
         
         for pipeline in pipelines:
             # Get overdue deals (≥7 days)
-            overdue = await self.deal_health.get_overdue_deals(pipeline, min_days=7)
+            overdue = self.deal_health.get_overdue_deals(pipeline, min_days=7)
             for deal in overdue[:5]:  # Top 5 overdue
                 item = DashboardItem(
                     type="overdue",
@@ -43,7 +43,7 @@ class DashboardService:
                 priority_counter += 1
             
             # Get stuck deals (≥30 days)
-            stuck = await self.deal_health.get_stuck_deals(pipeline, min_days=30)
+            stuck = self.deal_health.get_stuck_deals(pipeline, min_days=30)
             for deal in stuck[:5]:  # Top 5 stuck
                 item = DashboardItem(
                     type="stuck",

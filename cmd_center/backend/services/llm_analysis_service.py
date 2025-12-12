@@ -22,7 +22,7 @@ class LLMAnalysisService:
     ) -> List[OrderReceivedAnalysis]:
         """Analyze deals in 'Order received' stage."""
         # Get stuck deals (which includes order received)
-        stuck_deals = await self.deal_health.get_stuck_deals(pipeline_name, min_days)
+        stuck_deals = self.deal_health.get_stuck_deals(pipeline_name, min_days)
         
         # Filter for "Order received" stage (simplified - would need stage mapping)
         order_received_deals = [d for d in stuck_deals if "order" in d.stage.lower()]
@@ -63,7 +63,7 @@ class LLMAnalysisService:
             notes = [note.content for note in notes_dto]
             
             # Get base deal info
-            deal_base = await self.deal_health.get_deal_detail(dto.id)
+            deal_base = self.deal_health.get_deal_detail(dto.id)
             if not deal_base:
                 continue
             
@@ -103,7 +103,7 @@ class LLMAnalysisService:
             notes = [note.content for note in notes_dto]
             
             # Get base deal info
-            deal_base = await self.deal_health.get_deal_detail(dto.id)
+            deal_base = self.deal_health.get_deal_detail(dto.id)
             if not deal_base:
                 continue
             

@@ -13,7 +13,9 @@ router = APIRouter()
 async def get_aramco_overdue_deals(min_days: int = Query(7, ge=1)):
     """Get overdue deals from Aramco pipeline."""
     service = get_deal_health_service()
-    deals = await service.get_overdue_deals("Aramco Projects", min_days=min_days)
+    deals = service.get_overdue_deals("Aramco Projects", min_days=min_days)
+    print("#####OVERDUE DEALS#####")
+    print(deals)
     return deals
 
 
@@ -21,7 +23,7 @@ async def get_aramco_overdue_deals(min_days: int = Query(7, ge=1)):
 async def get_aramco_stuck_deals(min_days: int = Query(30, ge=1)):
     """Get stuck deals from Aramco pipeline."""
     service = get_deal_health_service()
-    deals = await service.get_stuck_deals("Aramco Projects", min_days=min_days)
+    deals = service.get_stuck_deals("Aramco Projects", min_days=min_days)
     return deals
 
 

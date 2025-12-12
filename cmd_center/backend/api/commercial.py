@@ -13,7 +13,7 @@ router = APIRouter()
 async def get_commercial_inactive_deals(min_days: int = Query(60, ge=1)):
     """Get inactive deals from commercial pipeline (no movement for 60+ days)."""
     service = get_deal_health_service()
-    deals = await service.get_stuck_deals("pipeline", min_days=min_days)
+    deals = service.get_stuck_deals("pipeline", min_days=min_days)
     return deals
 
 

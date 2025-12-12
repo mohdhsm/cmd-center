@@ -13,11 +13,11 @@ router = APIRouter()
 async def get_deal_detail(deal_id: int):
     """Get detailed information for a single deal."""
     service = get_deal_health_service()
-    deal = await service.get_deal_detail(deal_id)
-    
+    deal = service.get_deal_detail(deal_id)
+
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
-    
+
     return deal
 
 
