@@ -14,6 +14,7 @@ from .pipedrive_sync import (
     sync_notes_for_open_deals,
     get_last_sync_time,
 )
+from fastapi import FastAPI
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,9 @@ async def run_deals_sync():
                 await sync_deals_for_pipeline(pipeline_id, status="open", incremental=True)
             duration = asyncio.get_event_loop().time() - start_time
             logger.info(f"Deals sync completed in {duration:.2f}s")
+        # This is to stop the application when cancelled.
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             duration = asyncio.get_event_loop().time() - start_time
             logger.error(f"Deals sync failed after {duration:.2f}s: {e}")
@@ -71,6 +75,9 @@ async def run_notes_sync():
             await sync_notes_for_open_deals(limit_per_deal=5, ttl_minutes=30, concurrency=8)
             duration = asyncio.get_event_loop().time() - start_time
             logger.info(f"Notes sync completed in {duration:.2f}s")
+        # this is to stop the application and exit cleanly when cancelled.
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             duration = asyncio.get_event_loop().time() - start_time
             logger.error(f"Notes sync failed after {duration:.2f}s: {e}")
@@ -85,16 +92,16 @@ async def run_activities_sync():
 async def deals_loop():
     """Periodic deals sync loop (every 60 minutes)."""
     while True:
-        await run_deals_sync()
         await asyncio.sleep(60 * 60)  # 60 minutes
+        await run_deals_sync()
 
 
 async def notes_loop():
     """Periodic notes and activities sync loop (every 30 minutes)."""
     while True:
+        await asyncio.sleep(30 * 60)  # 30 minutes
         await run_notes_sync()
         await run_activities_sync()
-        await asyncio.sleep(30 * 60)  # 30 minutes
 
 
 async def start_scheduler():
@@ -132,7 +139,7 @@ async def stop_scheduler():
 
 
 @asynccontextmanager
-async def lifespan_manager():
+async def lifespan_manager(app: FastAPI):
     """Lifespan context manager for FastAPI."""
     from ..integrations import get_config
 
