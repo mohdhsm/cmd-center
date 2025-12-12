@@ -24,6 +24,8 @@ async def get_deal_detail(deal_id: int):
 @router.get("/{deal_id}/notes", response_model=List[DealNote])
 async def get_deal_notes(deal_id: int):
     """Get notes for a specific deal."""
-    service = get_llm_analysis_service()
-    notes = await service.get_deal_notes(deal_id)
+    service = get_deal_health_service
+    notes = service.get_deal_notes(deal_id)
+    if not notes:
+        raise HTTPException(status_code=404, detail="Notes not found")
     return notes

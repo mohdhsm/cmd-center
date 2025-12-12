@@ -3,7 +3,7 @@
 from typing import List, Optional
 from datetime import datetime, timezone
 
-from ..models import DealBase, OverdueDeal, StuckDeal, OrderReceivedAnalysis
+from ..models import DealBase, OverdueDeal, StuckDeal, OrderReceivedAnalysis, DealNote
 from ..constants import PIPELINE_NAME_TO_ID, PIPELINE_ID_TO_NAME
 from . import db_queries
 from sqlmodel import Session, select
@@ -168,6 +168,16 @@ class DealHealthService:
             order_received_deals.append(order_received_deal)
 
         return sorted(order_received_deals, key=lambda d: d.days_in_stage, reverse=True)
+    
+    # First check if the notes are stored in the database before implemennting this.
+    def get_deal_notes(self, deal_id: int) -> List[DealNote]:
+        """Get notes for a specific deal (read from database)."""
+        notes = db_queries.get_notes_by_deal_id(deal_id)
+
+        if notes:
+            return [self._note_to_deal_note(note) for note in notes]
+
+        return []
 
     def get_deal_detail(self, deal_id: int) -> Optional[DealBase]:
         """Get detailed information for a single deal (read from database)."""

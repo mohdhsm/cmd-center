@@ -7,12 +7,14 @@ import uvicorn
 from .api import api_router
 from .integrations import get_config
 from .db import init_db
+from .services.sync_scheduler import lifespan_manager
 
 # Create FastAPI app
 app = FastAPI(
     title="Command Center API",
     description="Sales & Project Management Command Center",
     version="1.0.0",
+    lifespan=lifespan_manager,
 )
 
 # Configure CORS
@@ -26,20 +28,6 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(api_router)
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Run on application startup."""
-    config = get_config()
-    init_db()
-    print(f"Command Center API starting on {config.api_host}:{config.api_port}")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Run on application shutdown."""
-    print("Command Center API shutting down")
 
 
 def main():

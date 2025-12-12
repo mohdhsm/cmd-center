@@ -477,7 +477,6 @@ TUI mapping: `OwnerKPIScreen` table.
       "content": "Client requested updated BOQ, sent."
     }
   ],
-  "llm_summary": "Deal in Order received; client reviewing updated BOQ. Next step: confirm end user contact and schedule survey.",
   "compliance": {
     "id": 123,
     "title": "Camp Toilets Phase 1",

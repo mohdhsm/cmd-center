@@ -4,7 +4,7 @@ import httpx
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Static, Button, DataTable, Footer
+from textual.widgets import Static, Button, DataTable, Footer,Select
 
 
 class CommercialPipelineScreen(Screen):
@@ -48,12 +48,19 @@ class CommercialPipelineScreen(Screen):
         
         with Horizontal(id="main-row"):
             with Vertical(id="sidebar"):
-                yield Static("Commercial Filters", id="sidebar-title")
-                yield Static("Mode:")
-                yield Button("1 Inactive (60+ days)", id="mode-inactive", variant="primary")
-                yield Button("2 Recent summary", id="mode-summary")
-                yield Static("")
-                yield Button("Reload", id="btn-reload")
+                yield Static("Options", id="sidebar-title")
+                yield Static("Group By:")
+                yield Select(options=[("Owner", "owner"), ("Stage", "stage")], id="groupby-select")
+                yield Static("Sort By:")
+                yield Select(options=[("Overdue Days","overdue"),("Value","value"),("Last Updated","last_updated")], id="sortby-select")
+                yield Button("View Summary", id="view-summary-button")
+                yield Static("-----------")
+                yield (Static("Deal Specfic Actions:", id="sidebar-title2"))
+                yield Button("Check last 3 notes", id="check-notes-button")
+                yield Button("Generate follo-up email",id="generate-followup-button")
+                yield Button("Get Summary", id="get-summary-button")
+                yield Button("Add Note", id="add-note-button")
+                yield Button("Check Compliance", id="check-compliance-button")
             
             with Vertical(id="content"):
                 yield Static("Commercial Pipeline", id="content-title")

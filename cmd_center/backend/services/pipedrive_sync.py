@@ -1,5 +1,6 @@
 """Sync Pipedrive data into the local SQLite cache."""
 
+import asyncio
 import json
 from typing import Any, Dict, List, Optional
 from datetime import datetime, timezone
@@ -336,6 +337,129 @@ async def sync_notes_for_deal(deal_id: int) -> int:
         raise
 
 
+async def sync_notes_for_open_deals(limit_per_deal: int = 5, ttl_minutes: int = 30, concurrency: int = 8) -> dict:
+    """Sync the most recent notes for open deals in specified pipelines."""
+    # 1. Query pipelines
+    with Session(engine) as session:
+        pipelines = session.exec(
+            select(Pipeline).where(Pipeline.name.in_(["Aramco Projects", "PIPELINE"]))
+        ).all()
+        pipeline_dict = {"Aramco Projects": None, "PIPELINE": None}
+        for p in pipelines:
+            pipeline_dict[p.name] = p.id
+        pipeline_ids = [pid for pid in pipeline_dict.values() if pid is not None]
+        pipeline_id_to_name = {id: name for name, id in pipeline_dict.items() if id is not None}
+
+    # 2. If no pipelines, return early
+    if not pipeline_ids:
+        return {
+            "pipelines": pipeline_dict,
+            "eligible_open_deals": 0,
+            "synced_deals": 0,
+            "skipped_fresh": 0,
+            "errors": [{"error": "No target pipelines found", "pipelines": pipeline_dict}]
+        }
+
+    # 3. Query open deals
+    with Session(engine) as session:
+        deals = session.exec(
+            select(Deal).where(
+                Deal.status == "open",
+                Deal.pipeline_id.in_(pipeline_ids)
+            )
+        ).all()
+
+    eligible_open_deals = len(deals)
+
+    # 4. Determine stale deals
+    stale_deals = []
+    for deal in deals:
+        entity_type = f"notes_{deal.id}"
+        last_sync = get_last_sync_time(entity_type)
+        if last_sync is None or (datetime.now(timezone.utc) - last_sync).total_seconds() / 60 > ttl_minutes:
+            stale_deals.append(deal)
+
+    skipped_fresh = eligible_open_deals - len(stale_deals)
+
+    # 5. Prepare shared resources
+    token, base_url = _get_token_and_base()
+    sort_value = "add_time DESC"
+    semaphore = asyncio.Semaphore(concurrency)
+
+    # 6. Wrap in async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient() as client:
+        # 7. Define sync_one_deal
+        async def sync_one_deal(deal) -> dict:
+            async with semaphore:
+                try:
+                    start_time = datetime.now()
+                    # Use GET /v1/notes with deal_id, start=0, limit=limit_per_deal, sort="add_time DESC" (sort supports add_time per docs)
+                    payload = await _pd_get(
+                        client, "notes", token, base_url,
+                        deal_id=deal.id, start=0, limit=limit_per_deal, sort=sort_value
+                    )
+                    items = payload.get("data") or []
+
+                    # Upsert notes
+                    with Session(engine) as session:
+                        for n in items:
+                            user = n.get("user") or {}
+                            note = Note(
+                                id=n["id"],
+                                deal_id=n.get("deal_id"),
+                                active_flag=n.get("active_flag", True),
+                                user_name=user.get("name") if isinstance(user, dict) else None,
+                                user_id=user.get("id") if isinstance(user, dict) else None,
+                                content=n.get("content", ""),
+                                add_time=_parse_datetime(n.get("add_time")),
+                                update_time=_parse_datetime(n.get("update_time")),
+                                lead_id=n.get("lead_id"),
+                            )
+                            session.merge(note)
+                        session.commit()
+
+                    duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+                    update_sync_metadata(f"notes_{deal.id}", "success", len(items), len(items), duration_ms)
+                    return {"deal_id": deal.id, "ok": True, "notes_synced": len(items)}
+                except Exception as e:
+                    update_sync_metadata(f"notes_{deal.id}", "failed", error_message=str(e))
+                    return {
+                        "deal_id": deal.id,
+                        "ok": False,
+                        "error": str(e),
+                        "context": {
+                            "pipeline_id": deal.pipeline_id,
+                            "pipeline_name": pipeline_id_to_name.get(deal.pipeline_id),
+                            "limit_per_deal": limit_per_deal,
+                            "ttl_minutes": ttl_minutes,
+                            "sort": sort_value,
+                        }
+                    }
+
+        # 8. Run tasks
+        results = await asyncio.gather(*(sync_one_deal(d) for d in stale_deals))
+
+    # 9. Compute
+    synced_deals = sum(1 for r in results if r["ok"])
+    errors = [
+        {
+            "deal_id": r["deal_id"],
+            "error": r["error"],
+            **r.get("context", {})
+        }
+        for r in results if not r["ok"]
+    ]
+
+    # 10. Return
+    return {
+        "pipelines": pipeline_dict,
+        "eligible_open_deals": eligible_open_deals,
+        "synced_deals": synced_deals,
+        "skipped_fresh": skipped_fresh,
+        "errors": errors
+    }
+
+
 # =============================================================================
 # Full Sync Functions
 # =============================================================================
@@ -399,6 +523,7 @@ __all__ = [
     "sync_stages",
     "sync_deals_for_pipeline",
     "sync_notes_for_deal",
+    "sync_notes_for_open_deals",
     "sync_all",
     "full_sync",
     "PipedriveSyncError",

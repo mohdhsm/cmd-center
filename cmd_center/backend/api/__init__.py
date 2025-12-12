@@ -1,7 +1,7 @@
 """FastAPI route handlers."""
 
 from fastapi import APIRouter
-from . import health, dashboard, aramco, commercial, owners, deals, emails
+from . import health, dashboard, aramco, commercial, owners, deals, emails, sync
 
 # Create main API router
 api_router = APIRouter()
@@ -14,5 +14,6 @@ api_router.include_router(commercial.router, prefix="/commercial", tags=["commer
 api_router.include_router(owners.router, prefix="/owners", tags=["owners"])
 api_router.include_router(deals.router, prefix="/deals", tags=["deals"])
 api_router.include_router(emails.router, prefix="/emails", tags=["emails"])
+api_router.include_router(sync.router, prefix="/sync", tags=["sync"])
 
 __all__ = ["api_router"]

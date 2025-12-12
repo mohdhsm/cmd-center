@@ -75,6 +75,7 @@ class DealNote(BaseModel):
     """Note associated with a deal."""
     
     id: int
+    deal_id:int 
     date: datetime
     author: Optional[str] = None
     content: str
