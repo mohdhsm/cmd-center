@@ -14,8 +14,6 @@ async def get_aramco_overdue_deals(min_days: int = Query(7, ge=1)):
     """Get overdue deals from Aramco pipeline."""
     service = get_deal_health_service()
     deals = service.get_overdue_deals("Aramco Projects", min_days=min_days)
-    print("#####OVERDUE DEALS#####")
-    print(deals)
     return deals
 
 

@@ -353,7 +353,15 @@ def get_last_sync_time(entity_type: str) -> Optional[datetime]:
         meta = session.exec(
             select(SyncMetadata).where(SyncMetadata.entity_type == entity_type)
         ).first()
-        return meta.last_sync_time if meta else None
+        if meta:
+            dt = meta.last_sync_time
+            if dt.tzinfo is None:
+                # Naive datetime from DB, treat as UTC
+                return dt.replace(tzinfo=timezone.utc)
+            else:
+                # Already aware, normalize to UTC
+                return dt.astimezone(timezone.utc)
+        return None
 
 
 __all__ = [

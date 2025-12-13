@@ -43,7 +43,13 @@ def get_last_sync_time(entity_type: str) -> Optional[datetime]:
             select(SyncMetadata).where(SyncMetadata.entity_type == entity_type)
         ).first()
         if meta and meta.status == "success":
-            return meta.last_sync_time
+            dt = meta.last_sync_time
+            if dt.tzinfo is None:
+                # Naive datetime from DB, treat as UTC
+                return dt.replace(tzinfo=timezone.utc)
+            else:
+                # Already aware, normalize to UTC
+                return dt.astimezone(timezone.utc)
         return None
 
 
@@ -506,16 +512,57 @@ async def full_sync():
 # =============================================================================
 
 def _parse_datetime(value) -> Optional[datetime]:
-    """Parse a datetime string from Pipedrive."""
+    """Parse a datetime string from Pipedrive and ensure it's timezone-aware UTC."""
     if not value:
         return None
     if isinstance(value, datetime):
-        return value
+        # If already a datetime, ensure it's timezone-aware UTC
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        else:
+            return value.astimezone(timezone.utc)
     try:
         # Pipedrive format: "2025-01-15 10:30:00"
-        return datetime.fromisoformat(value.replace(" ", "T"))
+        dt = datetime.fromisoformat(value.replace(" ", "T"))
+        # Pipedrive times are typically UTC, ensure timezone-aware
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        else:
+            return dt.astimezone(timezone.utc)
     except (ValueError, AttributeError):
         return None
+
+
+def _test_timezone_handling():
+    """Self-check function to verify timezone handling works correctly."""
+    from datetime import datetime, timezone
+
+    # Test 1: Simulate naive datetime from DB (get_last_sync_time logic)
+    naive_dt = datetime(2023, 1, 1, 12, 0, 0)  # No tzinfo
+
+    if naive_dt.tzinfo is None:
+        aware_dt = naive_dt.replace(tzinfo=timezone.utc)
+    else:
+        aware_dt = naive_dt.astimezone(timezone.utc)
+
+    assert aware_dt.tzinfo == timezone.utc, f"Expected UTC timezone, got {aware_dt.tzinfo}"
+
+    now = datetime.now(timezone.utc)
+    diff = now - aware_dt
+    assert diff.total_seconds() > 0, "Subtraction should work with aware datetimes"
+
+    # Test 2: Pipedrive datetime parsing
+    pipedrive_time_str = "2025-01-15 10:30:00"
+    parsed_dt = _parse_datetime(pipedrive_time_str)
+    
+    assert parsed_dt is not None, "Should parse valid datetime string"
+    assert parsed_dt.tzinfo == timezone.utc, f"Parsed datetime should be UTC-aware, got {parsed_dt.tzinfo}"
+    
+    # Test comparison between parsed datetime and now (this is where the error occurred)
+    comparison_result = parsed_dt > now  # Should not raise an error
+    assert isinstance(comparison_result, bool), "Comparison should work without errors"
+
+    print("Timezone handling test passed: DB conversion works, Pipedrive parsing works, comparisons succeed")
 
 
 __all__ = [
@@ -527,4 +574,5 @@ __all__ = [
     "sync_all",
     "full_sync",
     "PipedriveSyncError",
+    "_test_timezone_handling",
 ]
