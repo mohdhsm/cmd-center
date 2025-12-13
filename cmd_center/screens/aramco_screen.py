@@ -7,6 +7,7 @@ from textual.screen import Screen
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Static, Button, DataTable, Input, Footer,Select
 from textual.widgets._data_table import RowDoesNotExist
+from .notes_modal_screen import NotesModalScreen
 
 
 class AramcoPipelineScreen(Screen):
@@ -73,7 +74,7 @@ class AramcoPipelineScreen(Screen):
                 yield Button("View Summary", id="view-summary-button")
                 yield Static("-----------")
                 yield (Static("Deal Specfic Actions:", id="sidebar-title2"))
-                yield Button("Check last 3 notes", id="check-notes-button")
+                yield Button("Check last 5 notes", id="check-notes-button")
                 yield Button("Generate follo-up email",id="generate-followup-button")
                 yield Button("Get Summary", id="get-summary-button")
                 yield Button("Add Note", id="add-note-button")
@@ -260,12 +261,26 @@ class AramcoPipelineScreen(Screen):
             "mode-compliance": "compliance",
             "mode-cashflow": "cashflow",
         }
-        
+
         if event.button.id in mode_map:
             self.current_mode = mode_map[event.button.id]
             await self.load_mode_data()
         elif event.button.id == "btn-reload":
             await self.load_mode_data()
+        elif event.button.id == "check-notes-button":
+            # Show notes modal for selected deal
+            if self.selected_deal_id:
+                try:
+                    deal_id_int = int(self.selected_deal_id)
+                    modal = NotesModalScreen(self.api_url, deal_id_int)
+                    self.app.push_screen(modal)
+                except ValueError:
+                    # Invalid deal ID format
+                    pass
+            else:
+                # No deal selected, show modal with no deal
+                modal = NotesModalScreen(self.api_url, None)
+                self.app.push_screen(modal)
     
     def action_mode_overdue(self) -> None:
         """Switch to overdue mode."""

@@ -225,13 +225,14 @@ def search_deals(
 # Note Queries
 # =============================================================================
 
-def get_notes_for_deal(deal_id: int) -> list[Note]:
+def get_notes_for_deal(deal_id: int, limit: int) -> list[Note]:
     """Get all notes for a deal, ordered by date."""
     with Session(engine) as session:
         return list(session.exec(
             select(Note)
             .where(Note.deal_id == deal_id)
             .order_by(Note.add_time)
+            .limit(limit)
         ).all())
 
 # =============================================================================

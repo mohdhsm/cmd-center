@@ -169,10 +169,24 @@ class DealHealthService:
 
         return sorted(order_received_deals, key=lambda d: d.days_in_stage, reverse=True)
     
-    # First check if the notes are stored in the database before implemennting this.
-    def get_deal_notes(self, deal_id: int) -> List[DealNote]:
+    def _note_to_deal_note(self, note) -> DealNote:
+        """Convert Note SQLModel to DealNote Pydantic model."""
+        # Use add_time or update_time as date
+        date = note.add_time or note.update_time
+        if date and date.tzinfo is None:
+            date = date.replace(tzinfo=timezone.utc)
+        
+        return DealNote(
+            id=note.id,
+            deal_id=note.deal_id,
+            date=date or datetime.now(timezone.utc),
+            author=note.user_name,
+            content=note.content or ""
+        )
+    
+    def get_deal_notes(self, deal_id: int, limit: int) -> List[DealNote]:
         """Get notes for a specific deal (read from database)."""
-        notes = db_queries.get_notes_by_deal_id(deal_id)
+        notes = db_queries.get_notes_for_deal(deal_id, limit)
 
         if notes:
             return [self._note_to_deal_note(note) for note in notes]

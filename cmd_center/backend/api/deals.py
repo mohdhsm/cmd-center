@@ -1,6 +1,6 @@
 """Deals API endpoints."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
 
 from ..models import DealBase, DealNote
@@ -22,10 +22,8 @@ async def get_deal_detail(deal_id: int):
 
 
 @router.get("/{deal_id}/notes", response_model=List[DealNote])
-async def get_deal_notes(deal_id: int):
+async def get_deal_notes(deal_id: int, limit: int = Query(10, ge=1, le=100)):
     """Get notes for a specific deal."""
-    service = get_deal_health_service
-    notes = service.get_deal_notes(deal_id)
-    if not notes:
-        raise HTTPException(status_code=404, detail="Notes not found")
+    service = get_deal_health_service()
+    notes = service.get_deal_notes(deal_id, limit)
     return notes
