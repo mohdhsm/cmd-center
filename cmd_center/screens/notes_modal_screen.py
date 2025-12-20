@@ -2,10 +2,10 @@
 
 import httpx
 from textual.app import ComposeResult
-from textual.containers import Vertical, Horizontal, ScrollableContainer
+from textual.containers import Vertical, Horizontal, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Static, Button, Label
-
+from textual import log
 
 class NotesModalScreen(ModalScreen):
     """Modal screen showing the latest notes for a deal."""
@@ -20,6 +20,11 @@ class NotesModalScreen(ModalScreen):
         height: 30;
         border: thick $primary;
         background: $surface;
+    }
+
+    #notes-list {
+        height: auto;
+        width: 1fr;
     }
 
     #notes-title {
@@ -45,7 +50,13 @@ class NotesModalScreen(ModalScreen):
         align: center middle;
     }
 
+    .note-list{
+        height: auto;
+        width: 1fr;
+    }
+
     .note-item {
+        height: auto;
         margin: 1;
         padding: 1;
         border: solid $secondary;
@@ -58,9 +69,8 @@ class NotesModalScreen(ModalScreen):
     }
 
     .note-content {
-        margin-left: 1;
-        max-height: 10;
-        overflow: auto;
+        height: auto;
+        width: 1fr;
     }
     """
 
@@ -80,9 +90,9 @@ class NotesModalScreen(ModalScreen):
             yield Static(f"Notes for Deal {self.deal_id or 'N/A'}", id="notes-title")
             yield Static("Loading...", id="status-line")
 
-            with ScrollableContainer(id="notes-scroll"):
+            with VerticalScroll(id="notes-scroll"):
+                yield Vertical(id="notes-list")
                 # Notes will be added here dynamically
-                pass
 
             with Horizontal(id="footer"):
                 yield Button("Close", id="close-button")
@@ -94,11 +104,11 @@ class NotesModalScreen(ModalScreen):
     async def load_notes(self) -> None:
         """Load and display notes for the deal."""
         status_line = self.query_one("#status-line", Static)
-        scroll_view = self.query_one("#notes-scroll", ScrollableContainer)
+        scroll_view = self.query_one("#notes-scroll", VerticalScroll)
 
         # Clear previous content safely
         for child in list(scroll_view.children):
-            await child.remove()
+            child.remove()
 
         if not self.deal_id:
             status_line.update("No deal selected")
@@ -125,22 +135,26 @@ class NotesModalScreen(ModalScreen):
                     return
 
                 status_line.update(f"Showing {len(notes)} notes")
-
+                log(f"Notes loaded: {notes!r}")
+                log(notes)
                 # Add notes to scroll view using correct runtime API
                 for note in notes:
                     note_date = note.get("date", "Unknown date")
                     author = note.get("author", "Unknown author")
                     content = note.get("content", "")
+                    
 
                     # Create note item
-                    note_item = Vertical(classes="note-item")
+                    header = Static(f"{note_date} by {author}", classes="note-header")
+                    content_widget = Static(content, classes="note-content", markup=False)
+
+                    note_item = Vertical(
+                        header,
+                        content_widget,
+                        classes="note-item",
+                    )
                     note_item.border_title = f"Note #{note['id']}"
 
-                    header = Static(f"{note_date} by {author}", classes="note-header")
-                    content_widget = Static(content, classes="note-content")
-
-                    # Mount children using correct runtime API
-                    await note_item.mount(header, content_widget)
                     await scroll_view.mount(note_item)
 
         except httpx.HTTPStatusError as e:

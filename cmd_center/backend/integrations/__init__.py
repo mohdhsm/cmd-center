@@ -4,6 +4,7 @@ from .config import get_config
 from .pipedrive_client import PipedriveClient, get_pipedrive_client
 from .llm_client import LLMClient, get_llm_client
 from .email_client import EmailClient, get_email_client
+from .microsoft_client import MicrosoftClient, get_microsoft_client
 
 __all__ = [
     "get_config",
@@ -13,4 +14,6 @@ __all__ = [
     "get_llm_client",
     "EmailClient",
     "get_email_client",
+    "MicrosoftClient",
+    "get_microsoft_client",
 ]

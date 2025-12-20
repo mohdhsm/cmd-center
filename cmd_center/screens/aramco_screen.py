@@ -7,6 +7,7 @@ from textual.screen import Screen
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Static, Button, DataTable, Input, Footer,Select
 from textual.widgets._data_table import RowDoesNotExist
+from textual import log
 from .notes_modal_screen import NotesModalScreen
 
 
@@ -269,18 +270,23 @@ class AramcoPipelineScreen(Screen):
             await self.load_mode_data()
         elif event.button.id == "check-notes-button":
             # Show notes modal for selected deal
-            if self.selected_deal_id:
+            table = self.query_one("#aramco-table", DataTable)
+            cursor_row, cursor_col = table.cursor_coordinate
+            cell_key = table.coordinate_to_cell_key((cursor_row, cursor_col))
+            row_key = cell_key.row_key if cell_key else None
+            row_key_obj = cell_key.row_key if cell_key else None
+            row_key_value = row_key_obj.value if row_key_obj is not None else None
+            log(f"row_key_obj={row_key_obj!r} row_key_value={row_key_value!r} type={type(row_key_value)}")
+            if row_key is None:
+                self.notify("Select a deal row (not a group header).", severity="warning")
+            else:
                 try:
-                    deal_id_int = int(self.selected_deal_id)
+                    deal_id_int = int(row_key_value)
+                    self.selected_deal_id = str(deal_id_int)
                     modal = NotesModalScreen(self.api_url, deal_id_int)
                     self.app.push_screen(modal)
                 except ValueError:
-                    # Invalid deal ID format
-                    pass
-            else:
-                # No deal selected, show modal with no deal
-                modal = NotesModalScreen(self.api_url, None)
-                self.app.push_screen(modal)
+                    self.notify("Invalid deal ID.", severity="warning")
     
     def action_mode_overdue(self) -> None:
         """Switch to overdue mode."""
