@@ -12,6 +12,21 @@ from .deal_models import (
     DealFile,
     DealComment,
     DealSearchResult,
+    # CEO Radar Summary Models
+    OverdueSnapshot,
+    PMOverduePerformance,
+    CEOInterventionDeal,
+    OverdueSummaryResponse,
+    StuckSnapshot,
+    PMStuckControl,
+    WorstStuckDeal,
+    StageBottleneck,
+    StuckSummaryResponse,
+    OrderReceivedSnapshot,
+    PMPipelineAcceleration,
+    BlockersChecklistSummary,
+    FastWinDeal,
+    OrderReceivedSummaryResponse,
 )
 from .cashflow_models import CashflowBucket
 from .kpi_models import OwnerKPI
@@ -35,4 +50,19 @@ __all__ = [
     "DashboardItem",
     "DealIssue",
     "EmailDraft",
+    # CEO Radar Summary Models
+    "OverdueSnapshot",
+    "PMOverduePerformance",
+    "CEOInterventionDeal",
+    "OverdueSummaryResponse",
+    "StuckSnapshot",
+    "PMStuckControl",
+    "WorstStuckDeal",
+    "StageBottleneck",
+    "StuckSummaryResponse",
+    "OrderReceivedSnapshot",
+    "PMPipelineAcceleration",
+    "BlockersChecklistSummary",
+    "FastWinDeal",
+    "OrderReceivedSummaryResponse",
 ]

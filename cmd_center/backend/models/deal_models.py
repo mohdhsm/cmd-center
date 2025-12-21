@@ -121,5 +121,170 @@ class DealComment(BaseModel):
 
 class DealSearchResult(DealBase):
     """Search result for deals (currently same as DealBase)."""
-    
+
     pass
+
+
+# ============================================================================
+# CEO RADAR SUMMARY MODELS
+# ============================================================================
+
+# ============ OVERDUE SUMMARY MODELS ============
+
+class OverdueSnapshot(BaseModel):
+    """Executive snapshot for overdue deals."""
+    overdue_now_count: int
+    overdue_now_sar: float
+    overdue_soon_count: int  # next 7-14 days
+    overdue_soon_sar: float
+    worst_overdue: list  # Top 5: [{deal_id, title, days, sar}]
+
+
+class PMOverduePerformance(BaseModel):
+    """PM performance metrics for overdue."""
+    pm_name: str
+    overdue_now_count: int
+    overdue_now_sar: float
+    due_soon_count: int
+    due_soon_sar: float
+    avg_days_overdue: float
+    updated_this_week_count: int
+    has_next_activity_count: int
+    risk_score: float
+
+
+class CEOInterventionDeal(BaseModel):
+    """Deal requiring CEO intervention."""
+    deal_id: int
+    title: str
+    pm_name: str
+    stage: str
+    overdue_by_days: Optional[int] = None
+    days_in_stage: Optional[int] = None
+    days_since_update: int
+    last_note_snippet: Optional[str] = None
+    next_activity_date: Optional[str] = None
+    next_activity_exists: bool
+
+
+class OverdueSummaryResponse(BaseModel):
+    """Complete overdue summary modal data."""
+    snapshot: OverdueSnapshot
+    pm_performance: list[PMOverduePerformance]
+    intervention_list: list[CEOInterventionDeal]
+
+
+# ============ STUCK SUMMARY MODELS ============
+
+class StuckSnapshot(BaseModel):
+    """Executive snapshot for stuck deals."""
+    stuck_no_updates_count: int
+    stuck_no_updates_sar: float
+    bucket_30_45_count: int
+    bucket_30_45_sar: float
+    bucket_46_60_count: int
+    bucket_46_60_sar: float
+    bucket_60_plus_count: int
+    bucket_60_plus_sar: float
+    no_activity_count: int
+    oldest_stuck: list  # Top 5: [{deal_id, title, days_in_stage, sar}]
+
+
+class PMStuckControl(BaseModel):
+    """PM stuck control metrics."""
+    pm_name: str
+    stuck_count: int
+    stuck_sar: float
+    stuck_no_activity_sar: float
+    avg_days_in_stage: float
+    median_days_since_update: float
+    recovery_rate_30d: Optional[float] = None  # TODO: needs stage_change_time tracking
+
+
+class WorstStuckDeal(BaseModel):
+    """Worst stuck deal details."""
+    deal_id: int
+    title: str
+    pm_name: str
+    stage: str
+    days_in_stage: int
+    last_update_age: int
+    last_note_snippet: Optional[str] = None
+    blocking_flag: Optional[str] = None  # TODO: LLM-detected
+    suggested_next_step: Optional[str] = None  # TODO: LLM
+
+
+class StageBottleneck(BaseModel):
+    """Stage-level bottleneck data."""
+    stage_name: str
+    stuck_count: int
+    stuck_sar: float
+
+
+class StuckSummaryResponse(BaseModel):
+    """Complete stuck summary modal data."""
+    snapshot: StuckSnapshot
+    pm_control: list[PMStuckControl]
+    worst_deals: list[WorstStuckDeal]
+    stage_bottlenecks: list[StageBottleneck]
+    top_bottleneck_stage: str
+
+
+# ============ ORDER RECEIVED SUMMARY MODELS ============
+
+class OrderReceivedSnapshot(BaseModel):
+    """Executive snapshot for Order Received."""
+    open_count: int
+    open_sar: float
+    bucket_0_7_count: int
+    bucket_0_7_sar: float
+    bucket_8_14_count: int
+    bucket_8_14_sar: float
+    bucket_15_30_count: int
+    bucket_15_30_sar: float
+    bucket_30_plus_count: int
+    bucket_30_plus_sar: float
+    oldest_deal: dict  # {deal_id, title, age_days}
+    conversion_rate_30d: Optional[float] = None  # TODO: needs historical stage tracking
+
+
+class PMPipelineAcceleration(BaseModel):
+    """PM pipeline acceleration metrics."""
+    pm_name: str
+    open_count: int
+    open_sar: float
+    avg_age_days: float
+    pct_end_user_identified: float
+    pct_next_activity_scheduled: float
+    approved_30d_count: Optional[int] = None  # TODO: needs stage transition history
+    approved_30d_sar: Optional[float] = None  # TODO
+
+
+class BlockersChecklistSummary(BaseModel):
+    """Missing items summary."""
+    missing_end_user_count: int
+    missing_site_contact_count: Optional[int] = None  # TODO: field key unknown
+    missing_po_count: Optional[int] = None  # TODO: field key unknown
+    missing_dates_count: Optional[int] = None  # TODO: field key unknown
+    missing_product_type_count: Optional[int] = None  # TODO: field key unknown
+    missing_quantity_count: Optional[int] = None  # TODO: field key unknown
+    missing_next_activity_count: int
+
+
+class FastWinDeal(BaseModel):
+    """Fast win opportunity."""
+    deal_id: int
+    title: str
+    pm_name: str
+    value_sar: float
+    age_days: int
+    missing_items: list[str]  # e.g., ["End user", "PO reference"]
+    suggested_action: str
+
+
+class OrderReceivedSummaryResponse(BaseModel):
+    """Complete Order Received summary modal data."""
+    snapshot: OrderReceivedSnapshot
+    pm_acceleration: list[PMPipelineAcceleration]
+    blockers_checklist: BlockersChecklistSummary
+    fast_wins: list[FastWinDeal]

@@ -6,6 +6,7 @@ from .cashflow_service import CashflowService, get_cashflow_service
 from .owner_kpi_service import OwnerKPIService, get_owner_kpi_service
 from .email_service import EmailService, get_email_service
 from .dashboard_service import DashboardService, get_dashboard_service
+from .aramco_summary_service import AramcoSummaryService, get_aramco_summary_service
 
 __all__ = [
     "DealHealthService",
@@ -20,4 +21,6 @@ __all__ = [
     "get_email_service",
     "DashboardService",
     "get_dashboard_service",
+    "AramcoSummaryService",
+    "get_aramco_summary_service",
 ]

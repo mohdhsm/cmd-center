@@ -9,6 +9,9 @@ from textual.widgets import Static, Button, DataTable, Input, Footer,Select
 from textual.widgets._data_table import RowDoesNotExist
 from textual import log
 from .notes_modal_screen import NotesModalScreen
+from .overdue_summary_modal import OverdueSummaryModal
+from .stuck_summary_modal import StuckSummaryModal
+from .order_received_summary_modal import OrderReceivedSummaryModal
 
 
 class AramcoPipelineScreen(Screen):
@@ -287,6 +290,23 @@ class AramcoPipelineScreen(Screen):
                     self.app.push_screen(modal)
                 except ValueError:
                     self.notify("Invalid deal ID.", severity="warning")
+        elif event.button.id == "view-summary-button":
+            # Route to correct modal based on current mode
+            if self.current_mode == "overdue":
+                modal = OverdueSummaryModal(api_url=self.api_url)
+            elif self.current_mode == "stuck":
+                modal = StuckSummaryModal(api_url=self.api_url)
+            elif self.current_mode == "order":
+                modal = OrderReceivedSummaryModal(api_url=self.api_url)
+            elif self.current_mode == "compliance":
+                self.notify("Summary not yet implemented for Compliance.", severity="info")
+                return
+            elif self.current_mode == "cashflow":
+                self.notify("Summary not available for Cashflow view.", severity="info")
+                return
+
+            self.notify("Loading summary...", severity="info")
+            self.app.push_screen(modal)
     
     def action_mode_overdue(self) -> None:
         """Switch to overdue mode."""

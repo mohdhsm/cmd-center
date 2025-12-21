@@ -3,8 +3,22 @@
 from fastapi import APIRouter, Query
 from typing import List
 
-from ..models import OverdueDeal, StuckDeal, OrderReceivedAnalysis, ComplianceStatus, CashflowBucket
-from ..services import get_deal_health_service, get_llm_analysis_service, get_cashflow_service
+from ..models import (
+    OverdueDeal,
+    StuckDeal,
+    OrderReceivedAnalysis,
+    ComplianceStatus,
+    CashflowBucket,
+    OverdueSummaryResponse,
+    StuckSummaryResponse,
+    OrderReceivedSummaryResponse,
+)
+from ..services import (
+    get_deal_health_service,
+    get_llm_analysis_service,
+    get_cashflow_service,
+    get_aramco_summary_service,
+)
 
 router = APIRouter()
 
@@ -56,3 +70,43 @@ async def get_aramco_cashflow_projection(
     # )
     buckets = []
     return buckets
+
+
+# ============================================================================
+# CEO RADAR SUMMARY ENDPOINTS
+# ============================================================================
+
+@router.get("/overdue_summary", response_model=OverdueSummaryResponse)
+async def get_overdue_summary():
+    """
+    Get executive summary for overdue deals.
+
+    Returns:
+        OverdueSummaryResponse with snapshot, PM performance, and intervention list
+    """
+    service = get_aramco_summary_service()
+    return service.generate_overdue_summary("Aramco Projects")
+
+
+@router.get("/stuck_summary", response_model=StuckSummaryResponse)
+async def get_stuck_summary():
+    """
+    Get executive summary for stuck deals.
+
+    Returns:
+        StuckSummaryResponse with snapshot, PM control, worst deals, and bottlenecks
+    """
+    service = get_aramco_summary_service()
+    return service.generate_stuck_summary("Aramco Projects")
+
+
+@router.get("/order_received_summary", response_model=OrderReceivedSummaryResponse)
+async def get_order_received_summary():
+    """
+    Get executive summary for Order Received deals.
+
+    Returns:
+        OrderReceivedSummaryResponse with snapshot, PM acceleration, blockers, and fast wins
+    """
+    service = get_aramco_summary_service()
+    return service.generate_order_received_summary("Aramco Projects")
