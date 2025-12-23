@@ -8,7 +8,7 @@ from statistics import median
 
 from sqlmodel import Session, select
 
-from ..db import Deal, Note, Stage, engine
+from ..db import Deal, Note, Stage, DealStageSpan, engine
 from ..models import (
     OverdueSummaryResponse,
     OverdueSnapshot,
@@ -339,6 +339,11 @@ class AramcoSummaryService:
             days_since_update_list = [d["days_since_update"] for d in metrics["deals"]]
             median_days_update = median(days_since_update_list) if days_since_update_list else 0.0
 
+            # Calculate recovery rate using stage history
+            # Get all stage IDs where this PM has stuck deals
+            stuck_stage_ids = list({d["deal"].stage_id for d in metrics["deals"]})
+            recovery_rate = self._calculate_recovery_rate_30d(pm_name, stuck_stage_ids)
+
             pm_control.append(
                 PMStuckControl(
                     pm_name=pm_name,
@@ -347,7 +352,7 @@ class AramcoSummaryService:
                     stuck_no_activity_sar=metrics["no_activity_sar"],
                     avg_days_in_stage=avg_days,
                     median_days_since_update=median_days_update,
-                    recovery_rate_30d=None  # TODO: implement later
+                    recovery_rate_30d=recovery_rate
                 )
             )
 
@@ -495,6 +500,11 @@ class AramcoSummaryService:
             "age_days": sorted_by_age[0]["age_days"]
         } if sorted_by_age else {}
 
+        # Calculate conversion rate: Order Received -> Approved
+        # Stage 28 = Approved (from ORDER_RECEIVED_STAGE_IDS)
+        approved_stage_id = 28
+        conversion_rate = self._calculate_conversion_rate_30d(ORDER_RECEIVED_STAGE_IDS, approved_stage_id)
+
         snapshot = OrderReceivedSnapshot(
             open_count=open_count,
             open_sar=open_sar,
@@ -507,7 +517,7 @@ class AramcoSummaryService:
             bucket_30_plus_count=len(bucket_30_plus),
             bucket_30_plus_sar=sum(d["deal"].value for d in bucket_30_plus),
             oldest_deal=oldest_deal,
-            conversion_rate_30d=None  # TODO: implement later
+            conversion_rate_30d=conversion_rate
         )
 
         # === PM PIPELINE ACCELERATION TABLE ===
@@ -534,6 +544,9 @@ class AramcoSummaryService:
             has_activity_count = sum(1 for d in deals if d["deal"].next_activity_date is not None)
             pct_next_activity = (has_activity_count / open_count * 100) if open_count > 0 else 0.0
 
+            # Get approved deals in last 30 days
+            approved_count, approved_sar = self._get_approved_deals_30d(pm_name, approved_stage_id)
+
             pm_acceleration.append(
                 PMPipelineAcceleration(
                     pm_name=pm_name,
@@ -542,8 +555,8 @@ class AramcoSummaryService:
                     avg_age_days=avg_age,
                     pct_end_user_identified=pct_end_user,
                     pct_next_activity_scheduled=pct_next_activity,
-                    approved_30d_count=None,  # TODO
-                    approved_30d_sar=None  # TODO
+                    approved_30d_count=approved_count,
+                    approved_30d_sar=approved_sar
                 )
             )
 
@@ -604,6 +617,107 @@ class AramcoSummaryService:
         )
 
     # === HELPER METHODS ===
+
+    def _calculate_recovery_rate_30d(self, pm_name: str, current_stage_ids: list[int]) -> Optional[float]:
+        """
+        Calculate recovery rate: % of deals that moved OUT of stuck stages in last 30 days.
+
+        Recovery rate = (deals that left stage in last 30d) / (deals that were in stage 30d ago) * 100
+        """
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+
+        # Find deals that LEFT the current stuck stages in the last 30 days
+        # These are spans where left_at is within last 30 days and stage_id matches
+        statement = select(DealStageSpan).join(Deal).where(
+            DealStageSpan.stage_id.in_(current_stage_ids),
+            DealStageSpan.left_at.is_not(None),
+            DealStageSpan.left_at >= thirty_days_ago,
+            Deal.owner_name == pm_name
+        )
+        recovered_spans = self.session.exec(statement).all()
+        recovered_count = len(recovered_spans)
+
+        # Find deals that were in these stages 30 days ago
+        # These are spans where entered_at <= 30d ago and (left_at is None OR left_at >= 30d ago)
+        statement_total = select(DealStageSpan).join(Deal).where(
+            DealStageSpan.stage_id.in_(current_stage_ids),
+            DealStageSpan.entered_at <= thirty_days_ago,
+            Deal.owner_name == pm_name
+        ).where(
+            (DealStageSpan.left_at.is_(None)) | (DealStageSpan.left_at >= thirty_days_ago)
+        )
+        total_spans = self.session.exec(statement_total).all()
+        total_count = len(total_spans)
+
+        if total_count == 0:
+            return None
+
+        return (recovered_count / total_count) * 100
+
+    def _calculate_conversion_rate_30d(self, from_stage_ids: list[int], to_stage_id: int) -> Optional[float]:
+        """
+        Calculate conversion rate: % of deals that moved from Order Received stages to Approved in last 30 days.
+
+        Conversion rate = (deals that moved to Approved in last 30d) / (deals in Order Received at start of period) * 100
+        """
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+
+        # Find spans where deal moved TO the approved stage in last 30 days
+        # These are spans where stage_id = to_stage_id and entered_at is within last 30 days
+        # AND the previous stage was one of the from_stage_ids
+        statement_converted = select(DealStageSpan).where(
+            DealStageSpan.stage_id == to_stage_id,
+            DealStageSpan.entered_at >= thirty_days_ago,
+            DealStageSpan.from_stage_id.in_(from_stage_ids)
+        )
+        converted_spans = self.session.exec(statement_converted).all()
+        converted_count = len(converted_spans)
+
+        # Find deals that were in from_stage_ids 30 days ago
+        statement_total = select(DealStageSpan).where(
+            DealStageSpan.stage_id.in_(from_stage_ids),
+            DealStageSpan.entered_at <= thirty_days_ago
+        ).where(
+            (DealStageSpan.left_at.is_(None)) | (DealStageSpan.left_at >= thirty_days_ago)
+        )
+        total_spans = self.session.exec(statement_total).all()
+        total_count = len(total_spans)
+
+        if total_count == 0:
+            return None
+
+        return (converted_count / total_count) * 100
+
+    def _get_approved_deals_30d(self, pm_name: str, approved_stage_id: int = 28) -> tuple[int, float]:
+        """
+        Get count and SAR of deals that moved to Approved stage in last 30 days for a specific PM.
+
+        Returns: (count, total_sar)
+        """
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+
+        # Find spans where deal entered Approved stage in last 30 days
+        statement = select(DealStageSpan).join(Deal).where(
+            DealStageSpan.stage_id == approved_stage_id,
+            DealStageSpan.entered_at >= thirty_days_ago,
+            Deal.owner_name == pm_name
+        )
+        approved_spans = self.session.exec(statement).all()
+
+        # Get unique deals and their values
+        deal_ids = {span.deal_id for span in approved_spans}
+
+        if not deal_ids:
+            return (0, 0.0)
+
+        # Get deal values
+        statement_deals = select(Deal).where(Deal.id.in_(deal_ids))
+        deals = self.session.exec(statement_deals).all()
+
+        count = len(deals)
+        total_sar = sum(deal.value for deal in deals)
+
+        return (count, total_sar)
 
     def _calculate_risk_score(self, overdue_count: int, due_soon_count: int, no_activity_count: int) -> float:
         """Calculate PM risk score using weighted formula."""

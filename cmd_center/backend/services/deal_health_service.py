@@ -3,7 +3,10 @@
 from typing import List, Optional
 from datetime import datetime, timezone
 
-from ..models import DealBase, OverdueDeal, StuckDeal, OrderReceivedAnalysis, DealNote
+from ..models import (
+    DealBase, OverdueDeal, StuckDeal, OrderReceivedAnalysis, DealNote,
+    DealStageHistory, StageTransition, StagePerformanceMetrics
+)
 from ..constants import PIPELINE_NAME_TO_ID, PIPELINE_ID_TO_NAME
 from . import db_queries
 from sqlmodel import Session, select
@@ -196,11 +199,121 @@ class DealHealthService:
     def get_deal_detail(self, deal_id: int) -> Optional[DealBase]:
         """Get detailed information for a single deal (read from database)."""
         deal = db_queries.get_deal_by_id(deal_id)
-        
+
         if deal:
             return self._deal_to_deal_base(deal)
-        
+
         return None
+
+    def get_stage_history(self, deal_id: int) -> Optional[DealStageHistory]:
+        """Get complete stage history for a deal."""
+        # Get deal details
+        deal = db_queries.get_deal_by_id(deal_id)
+        if not deal:
+            return None
+
+        # Get stage spans
+        spans = db_queries.get_stage_spans_for_deal(deal_id)
+        if not spans:
+            return None
+
+        # Convert spans to transitions
+        transitions = []
+        for span in spans:
+            stage = db_queries.get_stage_by_id(span.stage_id)
+            stage_name = stage.name if stage else f"Stage {span.stage_id}"
+
+            # Ensure datetimes are timezone-aware
+            entered_at = span.entered_at
+            if entered_at and entered_at.tzinfo is None:
+                entered_at = entered_at.replace(tzinfo=timezone.utc)
+
+            left_at = span.left_at
+            if left_at and left_at.tzinfo is None:
+                left_at = left_at.replace(tzinfo=timezone.utc)
+
+            transition = StageTransition(
+                stage_id=span.stage_id,
+                stage_name=stage_name,
+                entered_at=entered_at,
+                left_at=left_at,
+                duration_hours=span.duration_hours,
+                is_current=(span.left_at is None),
+                transition_user_id=span.transition_user_id,
+                transition_source=span.transition_source
+            )
+            transitions.append(transition)
+
+        # Get metadata
+        pipeline_name = PIPELINE_ID_TO_NAME.get(deal.pipeline_id, f"Pipeline {deal.pipeline_id}")
+        current_stage = self._get_stage_name(deal.stage_id)
+
+        # Find first and last transition times
+        first_entry = min(span.entered_at for span in spans)
+        if first_entry and first_entry.tzinfo is None:
+            first_entry = first_entry.replace(tzinfo=timezone.utc)
+
+        # Find last transition (most recent left_at that's not None)
+        last_transition = None
+        for span in spans:
+            if span.left_at:
+                if not last_transition or span.left_at > last_transition:
+                    last_transition = span.left_at
+        if last_transition and last_transition.tzinfo is None:
+            last_transition = last_transition.replace(tzinfo=timezone.utc)
+
+        return DealStageHistory(
+            deal_id=deal.id,
+            deal_title=deal.title,
+            pipeline_name=pipeline_name,
+            current_stage=current_stage,
+            transitions=transitions,
+            total_transitions=len(transitions),
+            first_stage_entry=first_entry,
+            last_transition=last_transition
+        )
+
+    def get_stage_performance(
+        self,
+        stage_id: int,
+        days: int = 90,
+        stuck_threshold_hours: int = 168
+    ) -> Optional[StagePerformanceMetrics]:
+        """Get performance metrics for a specific stage."""
+        # Get stage details
+        stage = db_queries.get_stage_by_id(stage_id)
+        if not stage:
+            return None
+
+        # Get duration statistics
+        stats = db_queries.get_stage_duration_stats(stage_id, days)
+
+        # Get stuck deals count
+        stuck_deals = db_queries.get_deals_stuck_in_stage(stage_id, stuck_threshold_hours)
+
+        # Get current deals in this stage
+        with Session(db_queries.engine) as session:
+            current_deals_count = session.exec(
+                select(Deal)
+                .where(Deal.stage_id == stage_id)
+                .where(Deal.status == "open")
+            ).all()
+            current_count = len(list(current_deals_count))
+
+        return StagePerformanceMetrics(
+            stage_id=stage.id,
+            stage_name=stage.name,
+            total_deals=stats.get('total_deals', 0),
+            current_deals=current_count,
+            avg_duration_hours=stats.get('avg_duration_hours', 0.0),
+            median_duration_hours=stats.get('median_duration_hours', 0.0),
+            min_duration_hours=stats.get('min_duration_hours', 0.0),
+            max_duration_hours=stats.get('max_duration_hours', 0.0),
+            p95_duration_hours=stats.get('p95_duration_hours', 0.0),
+            stuck_threshold_hours=stuck_threshold_hours,
+            stuck_deals_count=len(stuck_deals),
+            analysis_period_days=days
+        )
 
 
 # Global service instance

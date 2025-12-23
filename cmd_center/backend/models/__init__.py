@@ -12,6 +12,10 @@ from .deal_models import (
     DealFile,
     DealComment,
     DealSearchResult,
+    # Stage History Models
+    StageTransition,
+    DealStageHistory,
+    StagePerformanceMetrics,
     # CEO Radar Summary Models
     OverdueSnapshot,
     PMOverduePerformance,
@@ -50,6 +54,10 @@ __all__ = [
     "DashboardItem",
     "DealIssue",
     "EmailDraft",
+    # Stage History Models
+    "StageTransition",
+    "DealStageHistory",
+    "StagePerformanceMetrics",
     # CEO Radar Summary Models
     "OverdueSnapshot",
     "PMOverduePerformance",

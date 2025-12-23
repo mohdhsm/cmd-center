@@ -84,11 +84,37 @@ class PipedriveDealDTO(BaseModel):
 
 class PipedriveNoteDTO(BaseModel):
     """DTO for Pipedrive note response."""
-    
+
     id: int
     content: str
     add_time: str
     user_id: Optional[int] = None
+
+
+class PipedriveDealChangeDTO(BaseModel):
+    """Single change event from flow API."""
+    model_config = ConfigDict(extra="ignore")
+
+    object: str  # "dealChange"
+    timestamp: datetime
+    data: Dict[str, Any]  # Contains id, field_key, old_value, new_value, log_time
+
+    @field_validator("timestamp", mode="before")
+    @classmethod
+    def parse_timestamp(cls, v):
+        if isinstance(v, str):
+            # Handle Pipedrive format: "2025-09-14 11:31:17"
+            from datetime import timezone
+            return datetime.fromisoformat(v.replace(" ", "T")).replace(tzinfo=timezone.utc)
+        return v
+
+
+class PipedriveDealFlowDTO(BaseModel):
+    """Response from /v1/deals/{id}/flow."""
+    model_config = ConfigDict(extra="ignore")
+
+    success: bool
+    data: List[PipedriveDealChangeDTO] = []
 
 
 class PipedriveClient:
@@ -178,7 +204,7 @@ class PipedriveClient:
     async def get_deal_notes(self, deal_id: int) -> List[PipedriveNoteDTO]:
         """Get notes for a deal."""
         data = await self._get(f"deals/{deal_id}/notes")
-        
+
         notes = []
         if data.get("success") and data.get("data"):
             for item in data["data"]:
@@ -186,9 +212,41 @@ class PipedriveClient:
                     notes.append(PipedriveNoteDTO(**item))
                 except Exception as e:
                     print(f"Error parsing note: {e}")
-        
+
         return notes
-    
+
+    async def get_deal_flow(
+        self,
+        deal_id: int,
+        start: int = 0,
+        all_changes: bool = True,
+        items: str = "dealChange"
+    ) -> Optional[PipedriveDealFlowDTO]:
+        """Get deal flow/history from Pipedrive.
+
+        Args:
+            deal_id: Deal ID
+            start: Pagination offset
+            all_changes: Include all changes (not just important ones)
+            items: Filter by item type (default: dealChange)
+        """
+        try:
+            data = await self._get(
+                f"deals/{deal_id}/flow",
+                params={
+                    "start": start,
+                    "all_changes": 1 if all_changes else 0,
+                    "items": items
+                }
+            )
+
+            if data.get("success"):
+                return PipedriveDealFlowDTO(**data)
+            return None
+        except Exception as e:
+            print(f"Error fetching flow for deal {deal_id}: {e}")
+            return None
+
     async def get_pipelines(self) -> List[Dict[str, Any]]:
         """Get all pipelines."""
         data = await self._get("pipelines")

@@ -533,6 +533,300 @@ def _parse_datetime(value) -> Optional[datetime]:
         return None
 
 
+# =============================================================================
+# Stage History Sync Functions
+# =============================================================================
+
+def _process_stage_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Match stage_id and stage_change_time events into transitions.
+
+    Returns list of transitions with format:
+    {
+        'deal_id': int,
+        'log_time': datetime,
+        'from_stage_id': int,
+        'to_stage_id': int,
+        'entered_old_stage_at': datetime,
+        'entered_new_stage_at': datetime,
+        'user_id': int,
+        'change_source': str
+    }
+    """
+    # Group events by (deal_id, log_time)
+    event_groups = {}
+    for event in events:
+        data = event.get("data", {})
+        key = (data.get("item_id"), data.get("log_time"))
+
+        if key not in event_groups:
+            event_groups[key] = []
+        event_groups[key].append(event)
+
+    transitions = []
+    for (deal_id, log_time), group in event_groups.items():
+        stage_event = None
+        time_event = None
+
+        for event in group:
+            data = event.get("data", {})
+            field_key = data.get("field_key")
+
+            if field_key == "stage_id":
+                stage_event = data
+            elif field_key == "stage_change_time":
+                time_event = data
+
+        # Must have stage_id event to be a valid transition
+        if stage_event:
+            transition = {
+                'deal_id': deal_id,
+                'log_time': _parse_datetime(log_time),
+                'from_stage_id': int(stage_event.get("old_value")) if stage_event.get("old_value") else None,
+                'to_stage_id': int(stage_event.get("new_value")),
+                'user_id': stage_event.get("user_id"),
+                'change_source': stage_event.get("change_source"),
+            }
+
+            # Add timing metadata if available
+            if time_event:
+                transition['entered_old_stage_at'] = _parse_datetime(time_event.get("old_value"))
+                transition['entered_new_stage_at'] = _parse_datetime(time_event.get("new_value"))
+
+            transitions.append(transition)
+
+    return transitions
+
+
+async def sync_stage_history_for_deal(deal_id: int) -> dict:
+    """Sync stage history for a specific deal.
+
+    Returns:
+        {
+            'deal_id': int,
+            'events_synced': int,
+            'spans_created': int,
+            'spans_updated': int,
+            'errors': list
+        }
+    """
+    from ..integrations.pipedrive_client import get_pipedrive_client
+    from ..db import DealChangeEvent, DealStageSpan
+
+    entity_type = f"stage_history_{deal_id}"
+    start_time = datetime.now(timezone.utc)
+
+    try:
+        # Fetch from Pipedrive
+        client = get_pipedrive_client()
+        flow_dto = await client.get_deal_flow(deal_id)
+
+        if not flow_dto or not flow_dto.data:
+            return {
+                'deal_id': deal_id,
+                'events_synced': 0,
+                'spans_created': 0,
+                'spans_updated': 0,
+                'errors': []
+            }
+
+        # 1. Store raw events
+        events_synced = 0
+        with Session(engine) as session:
+            for event in flow_dto.data:
+                data = event.data
+
+                # Check if already exists
+                existing = session.exec(
+                    select(DealChangeEvent).where(
+                        DealChangeEvent.pipedrive_event_id == data.get("id")
+                    )
+                ).first()
+
+                if not existing:
+                    change_event = DealChangeEvent(
+                        pipedrive_event_id=data.get("id"),
+                        deal_id=data.get("item_id"),
+                        timestamp=event.timestamp,
+                        log_time=_parse_datetime(data.get("log_time")),
+                        field_key=data.get("field_key"),
+                        old_value=str(data.get("old_value")) if data.get("old_value") is not None else None,
+                        new_value=str(data.get("new_value")) if data.get("new_value") is not None else None,
+                        user_id=data.get("user_id"),
+                        change_source=data.get("change_source"),
+                        origin=data.get("origin"),
+                        raw_json=json.dumps(data),
+                    )
+                    session.add(change_event)
+                    events_synced += 1
+
+            session.commit()
+
+        # 2. Process stage transitions
+        stage_events = [
+            e for e in flow_dto.data
+            if e.data.get("field_key") in ["stage_id", "stage_change_time"]
+        ]
+        transitions = _process_stage_events([e.model_dump() for e in stage_events])
+
+        # 3. Create/update DealStageSpan records
+        spans_created = 0
+        spans_updated = 0
+
+        with Session(engine) as session:
+            # Sort transitions chronologically
+            sorted_transitions = sorted(transitions, key=lambda t: t['log_time'])
+
+            for i, transition in enumerate(sorted_transitions):
+                # Close previous stage span
+                if transition['from_stage_id']:
+                    prev_span = session.exec(
+                        select(DealStageSpan).where(
+                            DealStageSpan.deal_id == deal_id,
+                            DealStageSpan.stage_id == transition['from_stage_id'],
+                            DealStageSpan.left_at == None
+                        )
+                    ).first()
+
+                    if prev_span:
+                        prev_span.left_at = transition['log_time']
+                        prev_span.next_stage_id = transition['to_stage_id']
+                        prev_span.updated_at = datetime.now(timezone.utc)
+
+                        # Compute duration
+                        duration = (prev_span.left_at - prev_span.entered_at).total_seconds() / 3600
+                        prev_span.duration_hours = duration
+
+                        spans_updated += 1
+
+                # Create new stage span
+                entered_at = transition.get('entered_new_stage_at') or transition['log_time']
+
+                # Check if span already exists
+                existing_span = session.exec(
+                    select(DealStageSpan).where(
+                        DealStageSpan.deal_id == deal_id,
+                        DealStageSpan.stage_id == transition['to_stage_id'],
+                        DealStageSpan.entered_at == entered_at
+                    )
+                ).first()
+
+                if not existing_span:
+                    new_span = DealStageSpan(
+                        deal_id=deal_id,
+                        stage_id=transition['to_stage_id'],
+                        entered_at=entered_at,
+                        left_at=None,  # Open span
+                        from_stage_id=transition['from_stage_id'],
+                        transition_user_id=transition['user_id'],
+                        transition_source=transition['change_source'],
+                    )
+                    session.add(new_span)
+                    spans_created += 1
+
+            session.commit()
+
+        # 4. Update sync metadata
+        duration_ms = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
+        update_sync_metadata(
+            entity_type, "success",
+            records_synced=events_synced,
+            records_total=len(flow_dto.data),
+            duration_ms=duration_ms
+        )
+
+        return {
+            'deal_id': deal_id,
+            'events_synced': events_synced,
+            'spans_created': spans_created,
+            'spans_updated': spans_updated,
+            'errors': []
+        }
+
+    except Exception as e:
+        update_sync_metadata(entity_type, "failed", error_message=str(e))
+        return {
+            'deal_id': deal_id,
+            'events_synced': 0,
+            'spans_created': 0,
+            'spans_updated': 0,
+            'errors': [str(e)]
+        }
+
+
+async def sync_stage_history_for_open_deals(
+    pipeline_names: List[str] = ["Pipeline", "Aramco Projects"],
+    concurrency: int = 5
+) -> dict:
+    """Sync stage history for all open deals in specified pipelines.
+
+    Args:
+        pipeline_names: List of pipeline names to sync
+        concurrency: Max concurrent API calls
+
+    Returns:
+        {
+            'total_deals': int,
+            'synced_successfully': int,
+            'failed': int,
+            'total_events': int,
+            'total_spans': int,
+            'errors': list
+        }
+    """
+    # 1. Get pipeline IDs
+    from ..constants import PIPELINE_NAME_TO_ID
+    pipeline_ids = [PIPELINE_NAME_TO_ID[name] for name in pipeline_names if name in PIPELINE_NAME_TO_ID]
+
+    if not pipeline_ids:
+        return {
+            'total_deals': 0,
+            'synced_successfully': 0,
+            'failed': 0,
+            'total_events': 0,
+            'total_spans': 0,
+            'errors': ['No valid pipelines found']
+        }
+
+    # 2. Query open deals
+    with Session(engine) as session:
+        deals = session.exec(
+            select(Deal).where(
+                Deal.status == "open",
+                Deal.pipeline_id.in_(pipeline_ids)
+            )
+        ).all()
+
+    total_deals = len(deals)
+
+    # 3. Sync with concurrency control
+    semaphore = asyncio.Semaphore(concurrency)
+
+    async def sync_one(deal):
+        async with semaphore:
+            return await sync_stage_history_for_deal(deal.id)
+
+    results = await asyncio.gather(*[sync_one(d) for d in deals])
+
+    # 4. Aggregate results
+    synced_successfully = sum(1 for r in results if not r['errors'])
+    failed = sum(1 for r in results if r['errors'])
+    total_events = sum(r['events_synced'] for r in results)
+    total_spans = sum(r['spans_created'] + r['spans_updated'] for r in results)
+    errors = [
+        {'deal_id': r['deal_id'], 'error': r['errors'][0]}
+        for r in results if r['errors']
+    ]
+
+    return {
+        'total_deals': total_deals,
+        'synced_successfully': synced_successfully,
+        'failed': failed,
+        'total_events': total_events,
+        'total_spans': total_spans,
+        'errors': errors
+    }
+
+
 def _test_timezone_handling():
     """Self-check function to verify timezone handling works correctly."""
     from datetime import datetime, timezone
@@ -554,10 +848,10 @@ def _test_timezone_handling():
     # Test 2: Pipedrive datetime parsing
     pipedrive_time_str = "2025-01-15 10:30:00"
     parsed_dt = _parse_datetime(pipedrive_time_str)
-    
+
     assert parsed_dt is not None, "Should parse valid datetime string"
     assert parsed_dt.tzinfo == timezone.utc, f"Parsed datetime should be UTC-aware, got {parsed_dt.tzinfo}"
-    
+
     # Test comparison between parsed datetime and now (this is where the error occurred)
     comparison_result = parsed_dt > now  # Should not raise an error
     assert isinstance(comparison_result, bool), "Comparison should work without errors"
@@ -571,8 +865,12 @@ __all__ = [
     "sync_deals_for_pipeline",
     "sync_notes_for_deal",
     "sync_notes_for_open_deals",
+    "sync_stage_history_for_deal",
+    "sync_stage_history_for_open_deals",
     "sync_all",
     "full_sync",
     "PipedriveSyncError",
+    "get_last_sync_time",
+    "update_sync_metadata",
     "_test_timezone_handling",
 ]

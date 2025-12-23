@@ -1,9 +1,9 @@
 """SQLite cache setup and SQLModel tables for Pipedrive data."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
-from sqlmodel import SQLModel, Field, create_engine
+from sqlmodel import SQLModel, Field, create_engine, Index
 
 # SQLite cache file; adjust path if needed
 engine = create_engine("sqlite:///pipedrive_cache.db", echo=False, connect_args={"check_same_thread": False})
@@ -138,7 +138,7 @@ class Comment(SQLModel, table=True):
 class SyncMetadata(SQLModel, table=True):
     """Tracks sync state for incremental updates."""
     __tablename__ = "sync_metadata"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     entity_type: str = Field(unique=True)
     last_sync_time: datetime
@@ -149,9 +149,83 @@ class SyncMetadata(SQLModel, table=True):
     error_message: Optional[str] = None
 
 
+class DealChangeEvent(SQLModel, table=True):
+    """Raw deal change event from Pipedrive flow API."""
+    __tablename__ = "deal_change_event"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Event identification
+    pipedrive_event_id: int = Field(index=True)  # data.id from Pipedrive
+    deal_id: int = Field(index=True, foreign_key="deal.id")
+
+    # Event metadata
+    timestamp: datetime = Field(index=True)  # object.timestamp
+    log_time: datetime = Field(index=True)  # data.log_time
+
+    # Change details
+    field_key: str = Field(index=True)  # e.g., "stage_id", "stage_change_time"
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+
+    # Context
+    user_id: Optional[int] = None
+    change_source: Optional[str] = None  # "app", "api", etc.
+    origin: Optional[str] = None
+
+    # Raw data for future extensibility
+    raw_json: str  # Full JSON for unmapped fields
+
+    # Sync tracking
+    synced_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class DealStageSpan(SQLModel, table=True):
+    """Derived table: time spent in each stage."""
+    __tablename__ = "deal_stage_span"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Identification
+    deal_id: int = Field(index=True, foreign_key="deal.id")
+    stage_id: int = Field(index=True, foreign_key="stage.id")
+
+    # Timeline
+    entered_at: datetime = Field(index=True)
+    left_at: Optional[datetime] = Field(default=None, index=True)  # NULL if currently in stage
+
+    # Computed metrics
+    duration_hours: Optional[float] = None  # Auto-computed on insert/update
+
+    # Context
+    from_stage_id: Optional[int] = Field(default=None, foreign_key="stage.id")  # Previous stage
+    next_stage_id: Optional[int] = Field(default=None, foreign_key="stage.id")  # Next stage (NULL if still in)
+
+    # Transition metadata
+    transition_user_id: Optional[int] = None
+    transition_source: Optional[str] = None  # "app", "api"
+
+    # Sync tracking
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[datetime] = None
+
+
 def init_db() -> None:
     """Create tables if they do not exist."""
     SQLModel.metadata.create_all(engine)
 
 
-__all__ = ["engine", "init_db", "Pipeline", "Stage", "Deal", "Note", "Activity", "File", "Comment", "SyncMetadata"]
+__all__ = [
+    "engine",
+    "init_db",
+    "Pipeline",
+    "Stage",
+    "Deal",
+    "Note",
+    "Activity",
+    "File",
+    "Comment",
+    "SyncMetadata",
+    "DealChangeEvent",
+    "DealStageSpan",
+]

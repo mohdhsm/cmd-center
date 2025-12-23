@@ -126,6 +126,53 @@ class DealSearchResult(DealBase):
 
 
 # ============================================================================
+# STAGE HISTORY MODELS
+# ============================================================================
+
+class StageTransition(BaseModel):
+    """Single stage transition event."""
+
+    stage_id: int
+    stage_name: str
+    entered_at: datetime
+    left_at: Optional[datetime] = None
+    duration_hours: Optional[float] = None
+    is_current: bool = False
+    transition_user_id: Optional[int] = None
+    transition_source: Optional[str] = None
+
+
+class DealStageHistory(BaseModel):
+    """Complete stage history for a deal."""
+
+    deal_id: int
+    deal_title: str
+    pipeline_name: str
+    current_stage: str
+    transitions: list[StageTransition]
+    total_transitions: int
+    first_stage_entry: datetime
+    last_transition: Optional[datetime] = None
+
+
+class StagePerformanceMetrics(BaseModel):
+    """Analytics for a specific stage."""
+
+    stage_id: int
+    stage_name: str
+    total_deals: int
+    current_deals: int
+    avg_duration_hours: float
+    median_duration_hours: float
+    min_duration_hours: float
+    max_duration_hours: float
+    p95_duration_hours: float
+    stuck_threshold_hours: int
+    stuck_deals_count: int
+    analysis_period_days: int
+
+
+# ============================================================================
 # CEO RADAR SUMMARY MODELS
 # ============================================================================
 
@@ -198,7 +245,7 @@ class PMStuckControl(BaseModel):
     stuck_no_activity_sar: float
     avg_days_in_stage: float
     median_days_since_update: float
-    recovery_rate_30d: Optional[float] = None  # TODO: needs stage_change_time tracking
+    recovery_rate_30d: Optional[float] = None  # % of deals that moved out of stuck stages in last 30d
 
 
 class WorstStuckDeal(BaseModel):
@@ -245,7 +292,7 @@ class OrderReceivedSnapshot(BaseModel):
     bucket_30_plus_count: int
     bucket_30_plus_sar: float
     oldest_deal: dict  # {deal_id, title, age_days}
-    conversion_rate_30d: Optional[float] = None  # TODO: needs historical stage tracking
+    conversion_rate_30d: Optional[float] = None  # % of deals that moved to Approved in last 30d
 
 
 class PMPipelineAcceleration(BaseModel):
@@ -256,8 +303,8 @@ class PMPipelineAcceleration(BaseModel):
     avg_age_days: float
     pct_end_user_identified: float
     pct_next_activity_scheduled: float
-    approved_30d_count: Optional[int] = None  # TODO: needs stage transition history
-    approved_30d_sar: Optional[float] = None  # TODO
+    approved_30d_count: Optional[int] = None  # Deals moved to Approved in last 30d
+    approved_30d_sar: Optional[float] = None  # SAR of deals moved to Approved in last 30d
 
 
 class BlockersChecklistSummary(BaseModel):

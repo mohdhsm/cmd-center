@@ -365,6 +365,126 @@ def get_last_sync_time(entity_type: str) -> Optional[datetime]:
         return None
 
 
+# =============================================================================
+# Stage History Queries
+# =============================================================================
+
+def get_stage_spans_for_deal(deal_id: int):
+    """Get all stage spans for a deal, ordered chronologically."""
+    from ..db import DealStageSpan
+    with Session(engine) as session:
+        return list(session.exec(
+            select(DealStageSpan)
+            .where(DealStageSpan.deal_id == deal_id)
+            .order_by(DealStageSpan.entered_at)
+        ).all())
+
+
+def get_current_stage_span(deal_id: int):
+    """Get the current open stage span for a deal."""
+    from ..db import DealStageSpan
+    with Session(engine) as session:
+        return session.exec(
+            select(DealStageSpan)
+            .where(
+                DealStageSpan.deal_id == deal_id,
+                DealStageSpan.left_at == None
+            )
+        ).first()
+
+
+def get_deals_stuck_in_stage(
+    stage_id: int,
+    min_hours: int = 168  # 7 days default
+):
+    """Get deals stuck in a specific stage for more than min_hours.
+
+    Returns list of (Deal, DealStageSpan) tuples.
+    """
+    from ..db import DealStageSpan
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=min_hours)
+
+    with Session(engine) as session:
+        stmt = (
+            select(Deal, DealStageSpan)
+            .join(DealStageSpan, Deal.id == DealStageSpan.deal_id)
+            .where(
+                DealStageSpan.stage_id == stage_id,
+                DealStageSpan.left_at == None,  # Currently in stage
+                DealStageSpan.entered_at < cutoff
+            )
+            .order_by(DealStageSpan.entered_at)
+        )
+        return list(session.exec(stmt).all())
+
+
+def get_stage_duration_stats(stage_id: int, days: int = 90) -> dict:
+    """Get duration statistics for a stage over last N days.
+
+    Returns:
+        {
+            'avg_hours': float,
+            'median_hours': float,
+            'min_hours': float,
+            'max_hours': float,
+            'total_transitions': int
+        }
+    """
+    from ..db import DealStageSpan
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
+    with Session(engine) as session:
+        spans = session.exec(
+            select(DealStageSpan)
+            .where(
+                DealStageSpan.stage_id == stage_id,
+                DealStageSpan.entered_at >= cutoff,
+                DealStageSpan.duration_hours != None
+            )
+        ).all()
+
+        if not spans:
+            return {
+                'avg_hours': 0,
+                'median_hours': 0,
+                'min_hours': 0,
+                'max_hours': 0,
+                'total_transitions': 0
+            }
+
+        durations = sorted([s.duration_hours for s in spans if s.duration_hours])
+
+        return {
+            'avg_hours': sum(durations) / len(durations),
+            'median_hours': durations[len(durations) // 2],
+            'min_hours': min(durations),
+            'max_hours': max(durations),
+            'total_transitions': len(durations)
+        }
+
+
+def get_deal_change_events(
+    deal_id: int,
+    field_keys: Optional[list[str]] = None
+):
+    """Get raw change events for a deal, optionally filtered by field.
+
+    Args:
+        deal_id: Deal ID
+        field_keys: Optional list of field keys to filter (e.g., ["stage_id", "value"])
+    """
+    from ..db import DealChangeEvent
+    with Session(engine) as session:
+        stmt = select(DealChangeEvent).where(DealChangeEvent.deal_id == deal_id)
+
+        if field_keys:
+            stmt = stmt.where(DealChangeEvent.field_key.in_(field_keys))
+
+        stmt = stmt.order_by(DealChangeEvent.log_time)
+
+        return list(session.exec(stmt).all())
+
+
 __all__ = [
     "get_pipeline_by_name",
     "get_stage_by_id",
@@ -387,4 +507,9 @@ __all__ = [
     "get_deal_value_by_owner",
     "get_sync_status",
     "get_last_sync_time",
+    "get_stage_spans_for_deal",
+    "get_current_stage_span",
+    "get_deals_stuck_in_stage",
+    "get_stage_duration_stats",
+    "get_deal_change_events",
 ]
