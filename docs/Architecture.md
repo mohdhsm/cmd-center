@@ -52,8 +52,11 @@ The application follows a **5-layer architecture** with clear separation of conc
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  Layer 3: Service Layer                                                 │
 │  - Business logic (deal_health, cashflow, kpis, emails, summaries)      │
+│  - WriterService: LLM-powered content generation                        │
+│  - CashflowPredictionService: Intelligent forecasting                   │
 │  - Calls query layer for data                                           │
-│  - Calls LLM integration for analysis                                   │
+│  - Uses PromptRegistry for LLM prompts                                  │
+│  - Uses DeterministicRules for rule-based logic                         │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
@@ -75,7 +78,9 @@ The application follows a **5-layer architecture** with clear separation of conc
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  External: Pipedrive API, Microsoft Graph API, OpenRouter LLM           │
+│  Infrastructure Layer (LLM, External APIs)                              │
+│  - LLMClient: Transport, retries, structured output                     │
+│  - Pipedrive API, Microsoft Graph API, OpenRouter LLM                   │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -85,8 +90,10 @@ The application follows a **5-layer architecture** with clear separation of conc
 |-------|----------|-------------|
 | UI (Textual) | FastAPI endpoints | Services, Database, Pipedrive |
 | API (FastAPI) | Services | Database directly, Pipedrive |
-| Services | db_queries.py, llm_client | Pipedrive directly |
+| Services | db_queries.py, WriterService, CashflowPredictionService, PromptRegistry | Pipedrive directly |
+| WriterService/CashflowPredictionService | LLMClient, PromptRegistry, DeterministicRules, db_queries | Pipedrive, direct LLM business logic |
 | db_queries.py | SQLite (read-only) | Pipedrive, external APIs |
+| LLMClient | OpenRouter API (infrastructure only) | Business logic, prompts |
 | pipedrive_sync.py | Pipedrive API, SQLite (write) | Services, API |
 
 ---
@@ -221,19 +228,24 @@ cmd_center/
 │   │
 │   ├── services/                   # Business logic
 │   │   ├── deal_health_service.py
-│   │   ├── llm_analysis_service.py
+│   │   ├── llm_analysis_service.py  # ⚠️ DEPRECATED - use WriterService
 │   │   ├── cashflow_service.py
+│   │   ├── cashflow_prediction_service.py  # ✨ NEW - LLM-powered forecasting
 │   │   ├── owner_kpi_service.py
 │   │   ├── email_service.py
 │   │   ├── dashboard_service.py
 │   │   ├── db_queries.py           # Read-only query functions
 │   │   ├── aramco_summary_service.py  # CEO Radar summaries
 │   │   ├── pipedrive_sync.py       # Sync functions
-│   │   └── sync_scheduler.py       # Background sync scheduler
+│   │   ├── sync_scheduler.py       # Background sync scheduler
+│   │   ├── writer_service.py       # ✨ NEW - LLM content generation
+│   │   ├── prompt_registry.py      # ✨ NEW - Centralized prompt management
+│   │   └── deterministic_rules.py  # ✨ NEW - Rule-based prediction logic
 │   │
 │   ├── models/                     # Pydantic models (API contracts)
 │   │   ├── deal_models.py          # Includes summary response models
-│   │   ├── cashflow_models.py
+│   │   ├── cashflow_models.py      # Extended with prediction models
+│   │   ├── writer_models.py        # ✨ NEW - WriterService input/output models
 │   │   ├── kpi_models.py
 │   │   ├── dashboard_models.py
 │   │   └── email_models.py
@@ -241,7 +253,7 @@ cmd_center/
 │   └── integrations/               # External API clients
 │       ├── config.py               # Pydantic settings
 │       ├── pipedrive_client.py     # Used by sync layer only
-│       ├── llm_client.py           # OpenRouter client
+│       ├── llm_client.py           # ✨ REFACTORED - Infrastructure only
 │       ├── email_client.py         # SMTP client
 │       └── microsoft_client.py     # Microsoft Graph API client
 │
@@ -416,6 +428,45 @@ For executive dashboard summaries:
 - `StuckSummaryResponse` - Stuck snapshot, PM control metrics, worst deals, bottlenecks
 - `OrderReceivedSummaryResponse` - Order snapshot, PM acceleration, blockers, fast wins
 
+### 5.4 LLM-Powered Cashflow Prediction Models (NEW)
+
+For intelligent cashflow forecasting:
+
+**Input Models:**
+- `DealForPrediction` - Deal data prepared for prediction
+- `PredictionOptions` - Prediction parameters (horizon, confidence threshold)
+- `CashflowPredictionInput` - Request parameters
+- `ForecastOptions` - Forecast formatting options
+
+**Output Models:**
+- `DealPrediction` - Single deal prediction with dates, confidence, reasoning
+- `PredictionMetadata` - Prediction run statistics
+- `CashflowPredictionResult` - Complete result with per-deal and aggregated forecasts
+- `ForecastPeriod` - Forecast data for one period (week/month)
+- `ForecastTotals` - Total forecast values
+- `ForecastTable` - Formatted table view
+- `AssumptionsReport` - Explanation of assumptions used
+
+### 5.5 WriterService Models (NEW)
+
+For LLM-powered content generation:
+
+**Input Context Models:**
+- `EmailDraftContext` - Email drafting parameters
+- `ReminderDraftContext` - Multi-channel reminder context (WhatsApp/Email/SMS)
+- `DealSummaryContext` - Deal analysis parameters
+- `ComplianceContext` - Compliance check parameters
+- `OrderReceivedContext` - Order analysis parameters
+- `NoteSummaryContext` - Note summarization parameters
+
+**Output Result Models (all include confidence scores 0.0-1.0):**
+- `DraftEmailResult` - Email with subject, body, HTML, suggestions
+- `DraftReminderResult` - Reminder with short/long versions, tags
+- `DealSummaryResult` - Summary with next action, blockers, recommendations
+- `ComplianceResult` - Compliance status with missing items
+- `OrderReceivedResult` - End user analysis
+- `NoteSummaryResult` - Summary with action items and owners
+
 ### 5.4 Model Transformation
 
 Services transform database models to API models:
@@ -501,10 +552,12 @@ def get_overdue_deals(pipeline_name: str, min_days: int = 7) -> list[OverdueDeal
 | `deal_health_service` | `get_overdue_deals_for_pipeline`, `get_stuck_deals_for_pipeline`, `get_deal_by_id`, `get_notes_for_deal` |
 | `aramco_summary_service` | Direct SQLModel sessions, calculates PM metrics, snapshots |
 | `cashflow_service` | `get_deals_near_invoicing`, `get_deals_by_stage` |
+| `cashflow_prediction_service` | `db_queries`, `LLMClient`, `PromptRegistry`, `DeterministicRules` |
 | `owner_kpi_service` | `get_deals_by_owner`, PipedriveClient for activities |
 | `dashboard_service` | Aggregates from other services |
-| `email_service` | Uses other services + llm_client |
-| `llm_analysis_service` | `get_notes_for_deal` + llm_client |
+| `email_service` | Uses other services + WriterService (planned) |
+| `writer_service` | `LLMClient`, `PromptRegistry`, `db_queries` (read-only) |
+| `llm_analysis_service` | **⚠️ DEPRECATED** - `get_notes_for_deal` + llm_client (use WriterService instead) |
 | `db_queries` | SQLite read operations |
 
 ### 7.2 Service Characteristics
@@ -535,6 +588,75 @@ Calculates:
 - PM performance tables (best/worst performers)
 - Intervention lists (deals needing attention)
 - Stage bottleneck analysis
+
+#### writer_service.py (NEW)
+LLM-powered content generation service:
+- `draft_email(context: EmailDraftContext)` → `DraftEmailResult`
+- `draft_reminder(context: ReminderDraftContext)` → `DraftReminderResult`
+- `summarize_deal(context: DealSummaryContext)` → `DealSummaryResult`
+- `analyze_compliance(context: ComplianceContext)` → `ComplianceResult`
+- `analyze_order_received(context: OrderReceivedContext)` → `OrderReceivedResult`
+- `summarize_notes(context: NoteSummaryContext)` → `NoteSummaryResult`
+- `batch_summarize_deals(contexts, max_concurrent=5)` → `List[DealSummaryResult]`
+
+Features:
+- Uses PromptRegistry for centralized prompt management
+- Structured output with Pydantic validation
+- Confidence scoring (0.0-1.0)
+- Graceful fallbacks on LLM failures
+- Concurrent batch processing with rate limiting
+
+#### cashflow_prediction_service.py (NEW)
+Intelligent cashflow forecasting with LLM + deterministic rules:
+- `predict_cashflow(input: CashflowPredictionInput)` → `CashflowPredictionResult`
+- `predict_deal_dates(deals, options, today)` → `List[DealPrediction]`
+- `generate_forecast_table(predictions, options)` → `ForecastTable`
+- `explain_assumptions(predictions)` → `AssumptionsReport`
+
+Features:
+- Hybrid approach: LLM predictions + rule-based overrides
+- Stage-based cycle time estimates (DeterministicRules)
+- Pre-checks for known cases (e.g., already invoiced)
+- Post-processing validation and sanity checks
+- Confidence-based filtering
+- Explainability reporting
+
+#### prompt_registry.py (NEW)
+Centralized prompt template management:
+- `get_prompt(prompt_id)` → `PromptTemplate`
+- `render_prompt(prompt_id, variables)` → `(system_prompt, user_prompt)`
+- `list_prompts()` → `list[dict]`
+- `get_prompt_config(prompt_id)` → `dict`
+
+**Registered Prompts:**
+1. `deal.summarize.v1` - Deal summarization
+2. `deal.compliance_check.v1` - Compliance analysis
+3. `deal.order_received_analysis.v1` - End user identification
+4. `email.followup.v1` - Email drafting
+5. `reminder.whatsapp.v1` - WhatsApp reminders
+6. `reminder.email.v1` - Email reminders
+7. `notes.summarize.v1` - Note summarization
+8. `cashflow.predict_dates.v1` - Invoice/payment prediction
+
+Features:
+- Jinja2 template rendering
+- Variable validation
+- Version support for A/B testing
+- Metadata tracking (model tier, temperature, tokens)
+
+#### deterministic_rules.py (NEW)
+Rule-based prediction logic for cashflow:
+- `precheck_deal(deal, today)` → `Optional[DealPrediction]`
+- `apply_overrides(prediction, deal, today)` → `DealPrediction`
+- `validate_prediction(prediction, today)` → `list[str]` (warnings)
+- `get_stage_estimate(stage)` → `Optional[int]` (days)
+
+**Stage Cycle Times:**
+- Order Received: 10 days
+- Under Progress: 22 days
+- Awaiting GR: 5 days
+- Production/Supplying: 45 days
+- Default payment terms: 37 days
 
 ---
 
@@ -628,7 +750,7 @@ async def sync_deals_incremental(pipeline_id: int):
 | Client | Used By | Purpose |
 |--------|---------|---------|
 | `pipedrive_client` | `pipedrive_sync.py` only | Fetch data from Pipedrive API |
-| `llm_client` | `llm_analysis_service` | Send prompts, parse JSON responses |
+| `llm_client` | `writer_service`, `cashflow_prediction_service` | **Infrastructure only** - HTTP transport, retries, structured output |
 | `email_client` | `email_service` | Send SMTP emails |
 | `microsoft_client` | Services (future) | SharePoint & OneDrive integration |
 
@@ -648,15 +770,46 @@ async def sync_deals_incremental(pipeline_id: int):
 - `get_files(deal_id)` → `List[File]`
 - `search_deals(term)` → `List[PipedriveDealDTO]`
 
-### 9.2 llm_client.py
+### 9.2 llm_client.py (REFACTORED)
+
+**⚠️ BREAKING CHANGE:** LLMClient now provides infrastructure only. Business logic moved to WriterService.
+
+**New Classes:**
+- `LLMError` - Base exception for LLM errors
+- `LLMRateLimitError` - Rate limit exceeded
+- `LLMValidationError` - Schema validation failed
+- `TokenUsage` - Token usage statistics with cost estimates
+- `LLMResponse` - Complete response with metadata
+- `LLMClient` - Main client class
 
 **Key Methods:**
-- `generate_completion(prompt, system_prompt, max_tokens, temperature)` → `str`
-- `analyze_deal_compliance(deal_title, stage, notes)` → `Dict`
-- `analyze_order_received(deal_title, notes)` → `Dict`
-- `summarize_deal(deal_title, stage, notes)` → `Dict`
+- `generate_completion(prompt, system_prompt, max_tokens, temperature, model)` → `LLMResponse`
+- `generate_structured_completion(schema: Type[T], prompt, system_prompt, ...)` → `T` (Pydantic instance)
+- `stream_completion(prompt, system_prompt, ...)` → `AsyncIterator[str]`
+- `get_metrics()` → `dict` (request_count, total_tokens, total_cost_usd)
+- `reset_metrics()` → `None`
+
+**Features:**
+- ✅ Async HTTP client with connection pooling (httpx)
+- ✅ Exponential backoff retry logic (max 3 retries, configurable)
+- ✅ Rate limit detection (429 status code)
+- ✅ Structured output with Pydantic schema validation
+- ✅ Token usage tracking and cost estimation
+- ✅ Comprehensive logging (request/response/errors)
+- ✅ Streaming support for real-time responses
+- ✅ Timeout handling (60s default, configurable)
+- ✅ Markdown code block parsing for JSON extraction
+
+**Removed Methods (moved to WriterService):**
+- ❌ `analyze_deal_compliance()` → Use `WriterService.analyze_compliance()`
+- ❌ `analyze_order_received()` → Use `WriterService.analyze_order_received()`
+- ❌ `summarize_deal()` → Use `WriterService.summarize_deal()`
 
 **Model Used:** `anthropic/claude-3.5-sonnet` (configurable)
+
+**Cost Estimation:** Approximate pricing per million tokens:
+- Input: $3.00
+- Output: $15.00
 
 ### 9.3 email_client.py
 
@@ -875,6 +1028,11 @@ COMMERCIAL_PIPELINE_NAME=pipeline
 - Main sync: `cmd_center/backend/services/pipedrive_sync.py`
 - Query helper: `cmd_center/backend/services/db_queries.py`
 - Summary service: `cmd_center/backend/services/aramco_summary_service.py`
+- **LLM Services (NEW):**
+  - Writer service: `cmd_center/backend/services/writer_service.py`
+  - Cashflow prediction: `cmd_center/backend/services/cashflow_prediction_service.py`
+  - Prompt registry: `cmd_center/backend/services/prompt_registry.py`
+  - Deterministic rules: `cmd_center/backend/services/deterministic_rules.py`
 
 **API:**
 - All endpoints: `cmd_center/backend/api/`
@@ -882,13 +1040,291 @@ COMMERCIAL_PIPELINE_NAME=pipeline
 
 **Integrations:**
 - All clients: `cmd_center/backend/integrations/`
+- LLM client (refactored): `cmd_center/backend/integrations/llm_client.py`
+- LLM observability (NEW): `cmd_center/backend/integrations/llm_observability.py`
+- LLM circuit breaker (NEW): `cmd_center/backend/integrations/llm_circuit_breaker.py`
 - Config: `cmd_center/backend/integrations/config.py`
+
+**Models:**
+- All models: `cmd_center/backend/models/`
+- Writer models (NEW): `cmd_center/backend/models/writer_models.py`
+- Cashflow models (extended): `cmd_center/backend/models/cashflow_models.py`
 
 **Screens:**
 - All screens: `cmd_center/screens/`
 
 **Database Cache:**
 - SQLite: `pipedrive_cache.db`
+
+**Documentation:**
+- Architecture: `docs/Architecture.md` (this file)
+- LLM Implementation: `docs/LLM_Architecture_Implementation.md`
+- LLM Quick Reference: `docs/LLM_Quick_Reference.md`
+
+---
+
+## 16. LLM Architecture (December 2024 Update)
+
+### 16.1 Architecture Principles
+
+The LLM infrastructure follows a **strict separation of concerns**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Business Logic Layer (Services)                            │
+│  - WriterService: Content generation                        │
+│  - CashflowPredictionService: Intelligent forecasting       │
+│  - Uses prompts from PromptRegistry                         │
+│  - Applies business rules via DeterministicRules            │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Prompt Management Layer                                    │
+│  - PromptRegistry: Centralized templates with versioning    │
+│  - Jinja2 rendering with variable validation               │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Infrastructure Layer (LLMClient)                           │
+│  - HTTP transport with connection pooling                  │
+│  - Retry logic with exponential backoff                    │
+│  - Structured output enforcement (JSON → Pydantic)         │
+│  - Metrics tracking (tokens, cost, latency)                │
+│  - Error handling & logging                                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 16.2 Key Design Decisions
+
+1. **LLMClient is infrastructure-only**: No business logic, prompts, or use-case-specific methods
+2. **PromptRegistry centralizes all prompts**: Version-controlled, Jinja2 templates
+3. **Services own business logic**: WriterService and CashflowPredictionService contain all use cases
+4. **Hybrid approach for predictions**: LLM + deterministic rules for reliability
+5. **Confidence scoring**: All LLM outputs include confidence (0.0-1.0) for downstream decision-making
+6. **Graceful degradation**: Fallbacks on LLM failures with clear warnings
+
+### 16.3 Migration from Old Architecture
+
+**Before (deprecated):**
+```python
+from cmd_center.backend.integrations.llm_client import get_llm_client
+
+llm = get_llm_client()
+result = await llm.summarize_deal(deal_title, stage, notes)  # ❌ No longer exists
+```
+
+**After (current):**
+```python
+from cmd_center.backend.services.writer_service import get_writer_service
+from cmd_center.backend.models import DealSummaryContext
+
+writer = get_writer_service()
+result = await writer.summarize_deal(DealSummaryContext(
+    deal_id=deal_id,
+    deal_title=deal_title,
+    stage=stage,
+    owner_name=owner_name,
+    days_in_stage=days_in_stage,
+    notes=notes
+))
+# ✅ Returns DealSummaryResult with summary, next_action, blockers, confidence
+```
+
+### 16.4 Usage Patterns
+
+**Pattern 1: Content Generation**
+```python
+from cmd_center.backend.services.writer_service import get_writer_service
+from cmd_center.backend.models import EmailDraftContext
+
+writer = get_writer_service()
+result = await writer.draft_email(EmailDraftContext(...))
+if result.confidence >= 0.7:
+    # High confidence - auto-approve
+    send_email(result.subject, result.body)
+else:
+    # Low confidence - flag for review
+    queue_for_review(result)
+```
+
+**Pattern 2: Cashflow Prediction**
+```python
+from cmd_center.backend.services.cashflow_prediction_service import get_cashflow_prediction_service
+from cmd_center.backend.models import CashflowPredictionInput
+
+service = get_cashflow_prediction_service()
+result = await service.predict_cashflow(CashflowPredictionInput(
+    pipeline_name="Aramco Projects",
+    horizon_days=90
+))
+
+for pred in result.per_deal_predictions:
+    if pred.confidence >= 0.7:
+        update_forecast(pred.deal_id, pred.predicted_invoice_date)
+```
+
+### 16.5 Observability
+
+**Metrics Available:**
+```python
+from cmd_center.backend.integrations.llm_client import get_llm_client
+
+client = get_llm_client()
+metrics = client.get_metrics()
+# Returns: {"request_count": 42, "total_tokens": 125000, "total_cost_usd": 1.875}
+```
+
+**Logging:**
+- INFO: Successful completions, batch operations
+- WARNING: Retries, fallbacks, low confidence
+- ERROR: LLM failures, validation errors
+
+### 16.6 Phase 4 - Integration & Migration (COMPLETED)
+
+**Completed:**
+- ✅ Updated `email_service.py` to use WriterService
+  - Confidence-based auto-send logic with thresholds
+  - Intelligent tone selection based on urgency
+  - Fallback email generation on LLM failures
+  - New filtering methods: `get_emails_for_review()`, `get_emails_ready_to_send()`
+- ✅ Enhanced `aramco_summary_service.py` with WriterService integration
+  - Infrastructure for LLM-powered deal analysis (blocking detection, suggested next steps)
+  - Note: Requires async refactoring for full integration
+- ✅ Deprecated `llm_analysis_service.py`
+  - Comprehensive deprecation warnings on import and method calls
+  - Complete migration guide in docstrings
+
+### 16.7 Phase 5 - Advanced Features (COMPLETED)
+
+**1. Structured Logging & Observability** (`llm_observability.py`)
+- ✅ `LLMObservabilityLogger` for structured JSON logging
+- ✅ `LLMRequestContext` dataclass for request tracking
+- ✅ Context manager `observe_llm_request()` for easy instrumentation
+- ✅ Automatic alerts for high costs (>$0.50) and latency (>5000ms)
+- ✅ Event tracking: request_start, request_complete, request_error, validation_error, retry, cost_alert, latency_alert
+- ✅ Integrated into WriterService.draft_email() as example
+
+**2. Circuit Breaker & Resilience** (`llm_circuit_breaker.py`)
+- ✅ Full circuit breaker pattern with 3 states: CLOSED, OPEN, HALF_OPEN
+- ✅ Configurable thresholds (default: 5 failures → open, 60s timeout)
+- ✅ Token bucket rate limiter (default: 60 RPM)
+- ✅ `LLMResilience` wrapper combining both patterns
+- ✅ Comprehensive statistics tracking
+- ✅ Optional fallback functions when circuit is open
+
+**3. Prompt Versioning & A/B Testing** (`prompt_registry.py`)
+- ✅ `PromptExperiment` class for A/B testing with traffic splitting
+- ✅ `PromptVariantStats` tracking usage, confidence, success rate, cost, latency
+- ✅ Intelligent winner selection based on composite score
+- ✅ Experiment lifecycle: create, test, analyze, promote winner
+- ✅ Methods: `create_experiment()`, `render_prompt_with_experiment()`, `record_experiment_result()`, `get_experiment_stats()`, `promote_winner()`, `list_experiments()`
+
+**Key Features:**
+- Statistical significance requirement (min 10 uses per variant)
+- Composite scoring: `(confidence × success_rate) / (cost × latency)`
+- Automatic or manual traffic splitting
+- Experiment deactivation after winner promotion
+
+### 16.8 Observability Reference
+
+**Structured Logging Example:**
+```python
+from cmd_center.backend.integrations.llm_observability import observe_llm_request
+
+with observe_llm_request("writer_service", "draft_email", "claude-3.5-sonnet") as ctx:
+    result = await llm.generate_completion(...)
+    ctx.prompt_tokens = result.usage.prompt_tokens
+    ctx.completion_tokens = result.usage.completion_tokens
+    ctx.cost_usd = result.usage.estimated_cost_usd
+    ctx.response_time_ms = result.response_time_ms
+# Automatically logs completion with metrics and alerts on anomalies
+```
+
+**Circuit Breaker Example:**
+```python
+from cmd_center.backend.integrations.llm_circuit_breaker import get_llm_resilience
+
+resilience = get_llm_resilience()
+result = await resilience.execute(
+    lambda: llm.generate_completion(...),
+    fallback=lambda: "LLM unavailable, using cached response"
+)
+# Automatically applies rate limiting and circuit breaker protection
+```
+
+**A/B Testing Example:**
+```python
+from cmd_center.backend.services.prompt_registry import get_prompt_registry
+
+registry = get_prompt_registry()
+
+# Create experiment
+experiment = registry.create_experiment(
+    experiment_id="email_tone_test",
+    base_prompt_id="email.followup.v1",
+    variants={
+        "formal": PromptTemplate(...),
+        "friendly": PromptTemplate(...),
+    },
+    traffic_split={"formal": 0.5, "friendly": 0.5}
+)
+
+# Use in production
+system_prompt, user_prompt, variant_id = registry.render_prompt_with_experiment(
+    "email_tone_test",
+    variables={...}
+)
+
+# Record result
+registry.record_experiment_result(
+    "email_tone_test",
+    variant_id,
+    success=True,
+    confidence=0.85,
+    cost_usd=0.007,
+    latency_ms=1200
+)
+
+# Get stats and promote winner
+stats = registry.get_experiment_stats("email_tone_test")
+winner = registry.promote_winner("email_tone_test", replace_base=True)
+```
+
+### 16.9 Cost Optimization
+
+**Token Usage Estimates:**
+| Use Case | Prompt Tokens | Completion Tokens | Cost (USD) |
+|----------|---------------|-------------------|------------|
+| Email Draft | ~500 | ~300 | ~$0.007 |
+| Deal Summary | ~400 | ~250 | ~$0.006 |
+| Compliance Check | ~300 | ~150 | ~$0.004 |
+| Cashflow (10 deals) | ~1500 | ~800 | ~$0.017 |
+
+**Optimization Strategies:**
+1. Use deterministic rules when possible (DeterministicRules)
+2. Batch operations to reduce overhead
+3. Confidence-based filtering to reduce unnecessary calls
+4. Prompt optimization for minimal token usage
+5. Rate limiting to stay within API quotas (LLMResilience)
+6. Circuit breaker to prevent cascading failures and wasted API calls
+
+### 16.10 Future Enhancements
+
+**Planned Additions:**
+- Response caching (LRU with TTL) to reduce duplicate LLM calls
+- Multi-model support (Haiku/Sonnet/Opus tier selection)
+- Prometheus metrics export for production monitoring
+- Async refactoring of aramco_summary_service for full LLM integration
+- Batch retry strategies for failed LLM calls
+- Dynamic prompt optimization based on A/B test results
+
+### 16.11 Reference Documentation
+
+For detailed implementation information, see:
+- `docs/LLM_Architecture_Implementation.md` - Complete implementation guide
+- `docs/LLM_Quick_Reference.md` - API quick reference
 
 ---
 

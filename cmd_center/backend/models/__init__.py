@@ -32,10 +32,40 @@ from .deal_models import (
     FastWinDeal,
     OrderReceivedSummaryResponse,
 )
-from .cashflow_models import CashflowBucket
+from .cashflow_models import (
+    CashflowBucket,
+    # LLM-powered prediction models
+    DealForPrediction,
+    PredictionOptions,
+    CashflowPredictionInput,
+    ForecastOptions,
+    DealPrediction,
+    PredictionMetadata,
+    CashflowPredictionResult,
+    ForecastPeriod,
+    ForecastTotals,
+    ForecastTable,
+    AssumptionsReport,
+)
 from .kpi_models import OwnerKPI
 from .dashboard_models import DashboardItem
 from .email_models import DealIssue, EmailDraft
+from .writer_models import (
+    # Input contexts
+    EmailDraftContext,
+    ReminderDraftContext,
+    DealSummaryContext,
+    ComplianceContext,
+    OrderReceivedContext,
+    NoteSummaryContext,
+    # Output results
+    DraftEmailResult,
+    DraftReminderResult,
+    DealSummaryResult,
+    ComplianceResult,
+    OrderReceivedResult,
+    NoteSummaryResult,
+)
 
 __all__ = [
     "DealBase",
@@ -73,4 +103,29 @@ __all__ = [
     "BlockersChecklistSummary",
     "FastWinDeal",
     "OrderReceivedSummaryResponse",
+    # Cashflow Prediction Models
+    "DealForPrediction",
+    "PredictionOptions",
+    "CashflowPredictionInput",
+    "ForecastOptions",
+    "DealPrediction",
+    "PredictionMetadata",
+    "CashflowPredictionResult",
+    "ForecastPeriod",
+    "ForecastTotals",
+    "ForecastTable",
+    "AssumptionsReport",
+    # Writer Service Models
+    "EmailDraftContext",
+    "ReminderDraftContext",
+    "DealSummaryContext",
+    "ComplianceContext",
+    "OrderReceivedContext",
+    "NoteSummaryContext",
+    "DraftEmailResult",
+    "DraftReminderResult",
+    "DealSummaryResult",
+    "ComplianceResult",
+    "OrderReceivedResult",
+    "NoteSummaryResult",
 ]
