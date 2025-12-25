@@ -394,9 +394,99 @@ Return ONLY a JSON object with this exact schema:
 
 ---
 
-## 7. Implementation Notes for llm_analysis_service
+## 7. predict_cashflow_dates(deals) → CashflowPredictionResult
 
-When implementing `llm_analysis_service.py`:
+### 7.1 Purpose
+
+Predict invoice and payment dates for deals using comprehensive construction/interior design industry rules. This function powers the cashflow forecasting feature.
+
+### 7.2 Schema
+
+```json
+{
+  "predictions": [
+    {
+      "deal_id": 123,
+      "deal_title": "ARAMCO - Baffle Ceiling Installation",
+      "predicted_invoice_date": "2025-02-15",
+      "predicted_payment_date": "2025-02-22",
+      "confidence": 0.75,
+      "assumptions": [
+        "Project is 200 SQM baffle ceiling",
+        "Production at 35 SQM/day with 1 team = 6 days",
+        "Using realistic stage duration estimates"
+      ],
+      "missing_fields": ["exact SQM from deal notes"],
+      "reasoning": "Deal at Under Progress stage with 5 days elapsed. Estimated 6 days production + 12 days post-production = 18 days to invoice."
+    }
+  ]
+}
+```
+
+### 7.3 Comprehensive Prediction Rules
+
+The LLM uses a detailed ruleset based on:
+
+**Project Lifecycle Stages:**
+1. Order Received (OR)
+2. Approved (APR)
+3. Awaiting Payment (AP)
+4. Awaiting Site Readiness (ASR) / Everything Ready (ER)
+5. Under Progress (UP)
+6. Awaiting MDD
+7. Awaiting GCC
+8. Awaiting GR
+9. Invoice Issued
+10. Payment Received
+
+**Stage Duration Reference (Realistic Estimates):**
+| Stage | Days to Invoice |
+|---|---|
+| Order Received (< 100 SQM) | 36 days + production |
+| Order Received (100-400 SQM) | 42 days + production |
+| Order Received (> 400 SQM) | 50 days + production |
+| Approved | 29 days + production |
+| Awaiting Payment | 27 days + production |
+| Awaiting Site Readiness | 22 days + production |
+| Everything Ready | 17 days + production |
+| Under Progress | 12 days + remaining production |
+| Awaiting MDD | 12 days |
+| Awaiting GCC | 10 days |
+| Awaiting GR | 7 days |
+
+**Production Capacity:**
+- Baffle Ceiling: 35 SQM/day per 4-worker team
+- Ceiling Tiles: 35 SQM/day per 3-worker team
+- Carpet: 50 SQM/day per worker
+
+**Payment Terms:**
+- Aramco: Upon invoice
+- Commercial: 30-60 days after invoice
+
+### 7.4 Prompt Template Reference
+
+See `prompt_registry.py` → `cashflow.predict_dates.v1` for the full prompt.
+
+The system prompt includes:
+- Company profile and workforce capacity
+- Complete stage duration tables
+- Production capacity formulas
+- Risk factor adjustments
+- Payment terms by client type
+
+### 7.5 Implementation Notes
+
+- Deterministic rules have been disabled in favor of LLM-based prediction
+- The LLM applies the comprehensive ruleset directly
+- Uses `model_tier="advanced"` for better reasoning
+- Temperature set to 0.3 for consistency
+- Max tokens: 4000 (to handle multiple deals)
+
+---
+
+## 8. Implementation Notes for Services
+
+When implementing `llm_analysis_service.py` or `cashflow_prediction_service.py`:
 
 - **Do not hardcode prompts everywhere.**  
   - Keep them as multiline strings or small helper functions that mirror the above templates.

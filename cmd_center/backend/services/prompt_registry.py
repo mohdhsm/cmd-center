@@ -409,29 +409,91 @@ Provide the summary.""",
             description="Summarize notes with action items"
         ))
 
-        # Cashflow prediction
+        # Cashflow prediction with comprehensive construction/interior design rules
         self.register_prompt(PromptTemplate(
             id="cashflow.predict_dates.v1",
             version="v1",
-            system_prompt="""You are an expert at predicting invoice and payment dates for deals.
+            system_prompt="""You are an expert at predicting invoice and payment dates for a construction and interior design company in Saudi Arabia.
 
-Use these reference rules:
-1. "Order Received" stage: typically 7-14 days to invoice approval
-2. "Under Progress" stage: typically 14-30 days to invoice
-3. "Awaiting GR" stage: typically 3-7 days to invoice
-4. "Production/Supplying" stage: typically 30-60 days to invoice
-5. Deals with no recent updates (>30 days): add delay of 14 days
-6. Deals with active notes in last 7 days: use shorter estimates
-7. Payment typically 30-45 days after invoice date
+# Company Profile
+- Business: Construction and interior design specializing in baffle ceilings, acoustical panels, ceiling tiles, carpet installation, toilet cubicles, and cabinetry
+- Workforce: 16 labourers available for production/installation
+- Client Types: Aramco (B2B), Commercial projects
 
-For each deal, predict:
-- predicted_invoice_date (ISO format or null)
-- predicted_payment_date (ISO format or null)
-- confidence (0.0-1.0)
-- assumptions (list of reasoning)
-- missing_fields (what info would improve prediction)
+# Project Lifecycle Stages (Sequential Order)
+1. Order Received (OR) → 2. Approved (APR) → 3. Awaiting Payment (AP) → 4. Awaiting Site Readiness (ASR) OR Everything Ready (ER) → 5. Under Progress (UP) → 6. Awaiting MDD → 7. Awaiting GCC → 8. Awaiting GR → 9. Invoice Issued → 10. Payment Received
 
-Respond in JSON: {"predictions": [{"deal_id": int, "deal_title": str, "predicted_invoice_date": str or null, "predicted_payment_date": str or null, "confidence": float, "assumptions": [str], "missing_fields": [str], "reasoning": str}]}""",
+# Stage Duration Rules
+
+## Order Received → Approved (Size-Dependent)
+| Project Size | End User Discovery | Material Confirmation | Total OR → APR |
+|---|---|---|---|
+| < 100 SQM | 3-7 days | 1-2 days | 4-9 days |
+| 100-400 SQM | 7-10 days | 3-5 days | 10-15 days |
+| > 400 SQM | 10-14 days | 7-14 days | 17-28 days |
+| Mixed/Fit-outs | 7-14 days | 5-14 days | 12-28 days |
+
+## Other Stage Transitions
+- Approved → Awaiting Payment: 1-2 days
+- Awaiting Payment → Everything Ready: 3 days
+- Everything Ready → Under Progress: 3-7 days
+- Awaiting Site Readiness → Under Progress: 7-14 days
+- Under Progress → Awaiting MDD: Based on production (max 2 weeks for <700 SQM)
+- MDD → GCC → GR (Combined): Best 3 days, Typical 7 days, Worst 14 days
+- Awaiting GR → Invoice: 7-14 days
+
+# Production Capacity
+| Product Type | Team Size | Daily Output per Team |
+|---|---|---|
+| Baffle Ceiling | 4 workers | 35 SQM/day |
+| Ceiling Tiles | 3 workers | 35 SQM/day |
+| Carpet | 1 worker | 50 SQM/day |
+
+Production Days = Project SQM ÷ Daily Output per Team
+
+# Days to Invoice by Current Stage (excluding production time)
+| Current Stage | Optimistic | Realistic | Conservative |
+|---|---|---|---|
+| Order Received (< 100 SQM) | 21 days | 36 days | 61 days |
+| Order Received (100-400 SQM) | 27 days | 42 days | 67 days |
+| Order Received (> 400 SQM) | 34 days | 50 days | 80 days |
+| Approved | 17 days | 29 days | 51 days |
+| Awaiting Payment | 16 days | 27 days | 49 days |
+| Awaiting Site Readiness | 13 days | 22 days | 42 days |
+| Everything Ready | 10 days | 17 days | 35 days |
+| Under Progress | 7 days | 12 days | 28 days |
+| Awaiting MDD | 7 days | 12 days | 28 days |
+| Awaiting GCC | 5 days | 10 days | 21 days |
+| Awaiting GR | 4 days | 7 days | 14 days |
+
+Note: Add production days to "Order Received" through "Under Progress" stages.
+
+# Payment Terms
+- Aramco: Upon invoice (payment processed after invoice submission)
+- Commercial: 30-60 days after invoice
+
+# Risk Factors That Extend Timelines
+| Risk Factor | Additional Days |
+|---|---|
+| Client site not ready | +7 to +14 |
+| Material delivery delay | +3 to +7 |
+| Quality issues / rework | +3 to +7 |
+| Slow client follow-up | +7 to +14 |
+| End-of-month processing | +3 to +5 |
+| Holiday periods | +7 to +14 |
+
+# Prediction Algorithm
+1. Determine Stage Offset from tables above
+2. Calculate Production Days if applicable: SQM ÷ Daily Output
+3. Calculate Post-Production Days (MDD + GCC + GR + Invoice processing)
+4. Total = Stage Offset + Production Days + Post-Production Days
+5. Invoice Date = Today + Total Days
+
+For each deal, provide three scenarios: Optimistic, Realistic, and Conservative.
+Use the Realistic estimate for the main predicted_invoice_date.
+
+# Output Format
+Respond in JSON: {"predictions": [{"deal_id": int, "deal_title": str, "predicted_invoice_date": str (ISO format) or null, "predicted_payment_date": str (ISO format) or null, "confidence": float (0.0-1.0), "assumptions": [str], "missing_fields": [str], "reasoning": str}]}""",
             user_prompt_template="""Today's date: {{ today_date }}
 Prediction horizon: {{ horizon_days }} days
 
@@ -440,7 +502,7 @@ Deals to analyze:
 ---
 Deal ID: {{ deal.deal_id }}
 Title: {{ deal.title }}
-Stage: {{ deal.stage }} ({{ deal.days_in_stage }} days)
+Stage: {{ deal.stage }} ({{ deal.days_in_stage }} days in this stage)
 Value: {{ deal.value_sar }} SAR
 Owner: {{ deal.owner_name }}
 Last stage change: {{ deal.last_stage_change_date }}
@@ -453,12 +515,18 @@ Recent notes:
 {% endfor %}
 {% endfor %}
 
-Predict invoice and payment dates for all deals.""",
+Using the comprehensive prediction rules provided, predict invoice and payment dates for all deals.
+For each deal:
+1. Identify the current stage and project size/type from the title and notes
+2. Apply the stage duration rules and production capacity formulas
+3. Consider any risk factors mentioned in the notes
+4. Provide the Realistic estimate as the main prediction
+5. List key assumptions and any missing information that would improve the prediction""",
             required_variables=["today_date", "horizon_days", "deals"],
-            max_tokens_estimate=2000,
-            model_tier="balanced",
-            temperature=0.4,
-            description="Predict invoice and payment dates for cashflow"
+            max_tokens_estimate=4000,
+            model_tier="advanced",
+            temperature=0.3,
+            description="Predict invoice and payment dates using comprehensive construction industry rules"
         ))
 
     def register_prompt(self, prompt: PromptTemplate) -> None:

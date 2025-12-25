@@ -86,9 +86,10 @@ class CashflowPredictionService:
         )
 
         # Make predictions
+        # NOTE: Deterministic overrides disabled - using LLM with comprehensive rules
         options = PredictionOptions(
             horizon_days=input_data.horizon_days,
-            use_deterministic_overrides=True,
+            use_deterministic_overrides=False,  # Disabled - LLM handles all predictions
         )
 
         predictions = await self.predict_deal_dates(deals_for_prediction, options, today)
@@ -143,18 +144,18 @@ class CashflowPredictionService:
         today = today or datetime.now()
         predictions = []
 
-        # Try deterministic rules first if enabled
-        if options.use_deterministic_overrides:
-            for deal in deals:
-                deterministic_pred = self.rules.precheck_deal(deal, today)
-                if deterministic_pred:
-                    predictions.append(deterministic_pred)
-                    deals = [d for d in deals if d.deal_id != deal.deal_id]
+        # NOTE: Deterministic pre-checks disabled - LLM handles all predictions with comprehensive rules
+        # if options.use_deterministic_overrides:
+        #     for deal in deals:
+        #         deterministic_pred = self.rules.precheck_deal(deal, today)
+        #         if deterministic_pred:
+        #             predictions.append(deterministic_pred)
+        #             deals = [d for d in deals if d.deal_id != deal.deal_id]
+        #
+        #     if predictions:
+        #         logger.info(f"Applied deterministic rules to {len(predictions)} deals")
 
-            if predictions:
-                logger.info(f"Applied deterministic rules to {len(predictions)} deals")
-
-        # For remaining deals, use LLM
+        # Use LLM for all deals
         if deals:
             try:
                 llm_predictions = await self._predict_with_llm(deals, today, options.horizon_days)
@@ -166,12 +167,12 @@ class CashflowPredictionService:
                     fallback = self._fallback_prediction(deal, today)
                     predictions.append(fallback)
 
-        # Apply overrides if enabled
-        if options.use_deterministic_overrides:
-            predictions = [
-                self.rules.apply_overrides(pred, deal, today)
-                for pred, deal in zip(predictions, deals)
-            ]
+        # NOTE: Deterministic overrides disabled - LLM predictions are used as-is
+        # if options.use_deterministic_overrides:
+        #     predictions = [
+        #         self.rules.apply_overrides(pred, deal, today)
+        #         for pred, deal in zip(predictions, deals)
+        #     ]
 
         # Filter by confidence threshold
         if options.confidence_threshold > 0:
