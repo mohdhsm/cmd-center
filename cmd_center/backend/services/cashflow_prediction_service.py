@@ -1,10 +1,11 @@
-"""Cashflow Prediction Service with LLM-powered date prediction.
+"""Cashflow Prediction Service with deterministic rule-based date prediction.
 
-This service provides intelligent cashflow forecasting by:
+This service provides cashflow forecasting by:
 1. Preparing deal data for prediction
-2. Using LLM to predict invoice/payment dates
-3. Applying deterministic rules for validation
-4. Aggregating predictions into forecast tables
+2. Using deterministic rules based on stage durations
+3. Aggregating predictions into forecast tables
+
+NOTE: LLM-powered predictions have been disabled in favor of pure deterministic rules.
 """
 
 import logging
@@ -29,8 +30,9 @@ from ..models.cashflow_models import (
     AssumptionsReport,
     CashflowBucket,
 )
-from ..integrations.llm_client import get_llm_client, LLMClient, LLMError
-from .prompt_registry import get_prompt_registry, PromptRegistry
+# LLM imports disabled - using pure deterministic rules
+# from ..integrations.llm_client import get_llm_client, LLMClient, LLMError
+# from .prompt_registry import get_prompt_registry, PromptRegistry
 from .deterministic_rules import DeterministicRules
 from .db_queries import get_notes_for_deal, get_stage_by_id
 
@@ -38,16 +40,19 @@ logger = logging.getLogger(__name__)
 
 
 class CashflowPredictionService:
-    """Service for LLM-powered cashflow prediction."""
+    """Service for deterministic cashflow prediction.
+
+    Uses rule-based predictions based on stage durations from the
+    Cashflow Prediction Reference Document.
+    """
 
     def __init__(
         self,
-        llm_client: Optional[LLMClient] = None,
-        prompt_registry: Optional[PromptRegistry] = None,
         rules_engine: Optional[DeterministicRules] = None,
     ):
-        self.llm = llm_client or get_llm_client()
-        self.prompts = prompt_registry or get_prompt_registry()
+        # LLM disabled - using pure deterministic rules
+        # self.llm = llm_client or get_llm_client()
+        # self.prompts = prompt_registry or get_prompt_registry()
         self.rules = rules_engine or DeterministicRules()
 
     # ========================================================================
@@ -85,11 +90,10 @@ class CashflowPredictionService:
             extra={"pipeline": input_data.pipeline_name}
         )
 
-        # Make predictions
-        # NOTE: Deterministic overrides disabled - using LLM with comprehensive rules
+        # Make predictions using deterministic rules
         options = PredictionOptions(
             horizon_days=input_data.horizon_days,
-            use_deterministic_overrides=False,  # Disabled - LLM handles all predictions
+            use_deterministic_overrides=True,  # Enable deterministic rules
         )
 
         predictions = await self.predict_deal_dates(deals_for_prediction, options, today)
@@ -131,7 +135,7 @@ class CashflowPredictionService:
         options: PredictionOptions,
         today: Optional[datetime] = None,
     ) -> list[DealPrediction]:
-        """Predict invoice and payment dates for deals.
+        """Predict invoice and payment dates for deals using deterministic rules.
 
         Args:
             deals: Deals to predict
@@ -144,35 +148,30 @@ class CashflowPredictionService:
         today = today or datetime.now()
         predictions = []
 
-        # NOTE: Deterministic pre-checks disabled - LLM handles all predictions with comprehensive rules
-        # if options.use_deterministic_overrides:
-        #     for deal in deals:
-        #         deterministic_pred = self.rules.precheck_deal(deal, today)
-        #         if deterministic_pred:
-        #             predictions.append(deterministic_pred)
-        #             deals = [d for d in deals if d.deal_id != deal.deal_id]
-        #
-        #     if predictions:
-        #         logger.info(f"Applied deterministic rules to {len(predictions)} deals")
+        # Use pure deterministic rules for all deals
+        for deal in deals:
+            prediction = self.rules.predict_deal(deal, today)
+            predictions.append(prediction)
 
-        # Use LLM for all deals
-        if deals:
-            try:
-                llm_predictions = await self._predict_with_llm(deals, today, options.horizon_days)
-                predictions.extend(llm_predictions)
-            except LLMError as e:
-                logger.error(f"LLM prediction failed: {e}")
-                # Fallback to deterministic for all
-                for deal in deals:
-                    fallback = self._fallback_prediction(deal, today)
-                    predictions.append(fallback)
+        logger.info(f"Generated {len(predictions)} deterministic predictions")
 
-        # NOTE: Deterministic overrides disabled - LLM predictions are used as-is
-        # if options.use_deterministic_overrides:
-        #     predictions = [
-        #         self.rules.apply_overrides(pred, deal, today)
-        #         for pred, deal in zip(predictions, deals)
-        #     ]
+        # Apply deterministic overrides (validation & corrections)
+        if options.use_deterministic_overrides:
+            predictions = [
+                self.rules.apply_overrides(pred, deal, today)
+                for pred, deal in zip(predictions, deals)
+            ]
+
+        # LLM prediction code disabled - using pure deterministic rules
+        # if deals:
+        #     try:
+        #         llm_predictions = await self._predict_with_llm(deals, today, options.horizon_days)
+        #         predictions.extend(llm_predictions)
+        #     except LLMError as e:
+        #         logger.error(f"LLM prediction failed: {e}")
+        #         for deal in deals:
+        #             fallback = self._fallback_prediction(deal, today)
+        #             predictions.append(fallback)
 
         # Filter by confidence threshold
         if options.confidence_threshold > 0:
@@ -355,99 +354,103 @@ class CashflowPredictionService:
 
         return deals_for_prediction
 
-    async def _predict_with_llm(
-        self,
-        deals: list[DealForPrediction],
-        today: datetime,
-        horizon_days: int,
-    ) -> list[DealPrediction]:
-        """Use LLM to predict dates for deals.
+    # ========================================================================
+    # LLM METHODS - DISABLED (kept for reference)
+    # ========================================================================
 
-        Args:
-            deals: Deals to predict
-            today: Reference date
-            horizon_days: Prediction horizon
+    # async def _predict_with_llm(
+    #     self,
+    #     deals: list[DealForPrediction],
+    #     today: datetime,
+    #     horizon_days: int,
+    # ) -> list[DealPrediction]:
+    #     """Use LLM to predict dates for deals.
+    #
+    #     Args:
+    #         deals: Deals to predict
+    #         today: Reference date
+    #         horizon_days: Prediction horizon
+    #
+    #     Returns:
+    #         List of DealPrediction
+    #     """
+    #     # Render prompt
+    #     system_prompt, user_prompt = self.prompts.render_prompt(
+    #         "cashflow.predict_dates.v1",
+    #         {
+    #             "today_date": today.isoformat(),
+    #             "horizon_days": horizon_days,
+    #             "deals": [deal.model_dump() for deal in deals],
+    #         }
+    #     )
+    #
+    #     # Get config
+    #     config = self.prompts.get_prompt_config("cashflow.predict_dates.v1")
+    #
+    #     # Call LLM with structured output
+    #     # We expect: {"predictions": [...]}
+    #     from pydantic import BaseModel
+    #
+    #     class PredictionsResponse(BaseModel):
+    #         predictions: list[DealPrediction]
+    #
+    #     result = await self.llm.generate_structured_completion(
+    #         schema=PredictionsResponse,
+    #         prompt=user_prompt,
+    #         system_prompt=system_prompt,
+    #         max_tokens=config["max_tokens"],
+    #         temperature=config["temperature"],
+    #         fallback_on_validation_error=True,
+    #     )
+    #
+    #     # Enrich predictions with deal data (owner, stage, value)
+    #     deal_map = {deal.deal_id: deal for deal in deals}
+    #     for pred in result.predictions:
+    #         if pred.deal_id in deal_map:
+    #             deal = deal_map[pred.deal_id]
+    #             pred.owner_name = deal.owner_name
+    #             pred.stage = deal.stage
+    #             pred.value_sar = deal.value_sar
+    #
+    #     return result.predictions
 
-        Returns:
-            List of DealPrediction
-        """
-        # Render prompt
-        system_prompt, user_prompt = self.prompts.render_prompt(
-            "cashflow.predict_dates.v1",
-            {
-                "today_date": today.isoformat(),
-                "horizon_days": horizon_days,
-                "deals": [deal.model_dump() for deal in deals],
-            }
-        )
-
-        # Get config
-        config = self.prompts.get_prompt_config("cashflow.predict_dates.v1")
-
-        # Call LLM with structured output
-        # We expect: {"predictions": [...]}
-        from pydantic import BaseModel
-
-        class PredictionsResponse(BaseModel):
-            predictions: list[DealPrediction]
-
-        result = await self.llm.generate_structured_completion(
-            schema=PredictionsResponse,
-            prompt=user_prompt,
-            system_prompt=system_prompt,
-            max_tokens=config["max_tokens"],
-            temperature=config["temperature"],
-            fallback_on_validation_error=True,
-        )
-
-        # Enrich predictions with deal data (owner, stage, value)
-        deal_map = {deal.deal_id: deal for deal in deals}
-        for pred in result.predictions:
-            if pred.deal_id in deal_map:
-                deal = deal_map[pred.deal_id]
-                pred.owner_name = deal.owner_name
-                pred.stage = deal.stage
-                pred.value_sar = deal.value_sar
-
-        return result.predictions
-
-    def _fallback_prediction(
-        self,
-        deal: DealForPrediction,
-        today: datetime,
-    ) -> DealPrediction:
-        """Generate fallback prediction when LLM fails.
-
-        Args:
-            deal: Deal data
-            today: Reference date
-
-        Returns:
-            DealPrediction with low confidence
-        """
-        # Use stage-based estimate if available
-        stage_estimate = self.rules.get_stage_estimate(deal.stage)
-        if stage_estimate:
-            invoice_date = today + timedelta(days=stage_estimate)
-        else:
-            # Default: 30 days
-            invoice_date = today + timedelta(days=30)
-
-        payment_date = invoice_date + timedelta(days=self.rules.DEFAULT_PAYMENT_TERMS)
-
-        return DealPrediction(
-            deal_id=deal.deal_id,
-            deal_title=deal.title,
-            predicted_invoice_date=invoice_date,
-            predicted_payment_date=payment_date,
-            confidence=0.3,
-            assumptions=["Fallback: LLM error, using stage estimate or default 30 days"],
-            missing_fields=["LLM prediction unavailable"],
-            reasoning="Fallback prediction due to LLM error",
-            owner_name=deal.owner_name,
-            stage=deal.stage,
-            value_sar=deal.value_sar,
-        )
+    # def _fallback_prediction(
+    #     self,
+    #     deal: DealForPrediction,
+    #     today: datetime,
+    # ) -> DealPrediction:
+    #     """Generate fallback prediction when LLM fails.
+    #
+    #     Args:
+    #         deal: Deal data
+    #         today: Reference date
+    #
+    #     Returns:
+    #         DealPrediction with low confidence
+    #     """
+    #     # Use stage-based estimate if available
+    #     stage_estimate = self.rules.get_stage_estimate(deal.stage)
+    #     if stage_estimate:
+    #         invoice_date = today + timedelta(days=stage_estimate)
+    #     else:
+    #         # Default: 30 days
+    #         invoice_date = today + timedelta(days=30)
+    #
+    #     payment_date = invoice_date + timedelta(days=self.rules.DEFAULT_PAYMENT_TERMS)
+    #
+    #     return DealPrediction(
+    #         deal_id=deal.deal_id,
+    #         deal_title=deal.title,
+    #         predicted_invoice_date=invoice_date,
+    #         predicted_payment_date=payment_date,
+    #         confidence=0.3,
+    #         assumptions=["Fallback: LLM error, using stage estimate or default 30 days"],
+    #         missing_fields=["LLM prediction unavailable"],
+    #         reasoning="Fallback prediction due to LLM error",
+    #         owner_name=deal.owner_name,
+    #         stage=deal.stage,
+    #         value_sar=deal.value_sar,
+    #     )
 
     def _filter_by_horizon(
         self,
