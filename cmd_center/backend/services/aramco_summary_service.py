@@ -42,6 +42,8 @@ END_USER_FIELD_KEY = "bd7bb3b2758ca81feebf015ca60bf528eafe47f0"
 
 # Order Received stage IDs (from docs/pipedrive_Schema_info.md)
 ORDER_RECEIVED_STAGE_IDS = [27, 28, 29, 45]
+STUCK_STAGE_IDS= [27,28, 29,44,45,30,82,42,43]
+OVERDUE_STAGE_IDS= [27,28,29,44,45,30,82,42,43,49]
 
 
 class AramcoSummaryService:
@@ -72,7 +74,8 @@ class AramcoSummaryService:
         # Fetch overdue deals
         statement = select(Deal).where(
             Deal.status == "open",
-            Deal.update_time < week_ago
+            Deal.update_time < week_ago,
+            Deal.stage_id.in_(OVERDUE_STAGE_IDS),
         )
         overdue_deals = self.session.exec(statement).all()
 
@@ -260,6 +263,7 @@ class AramcoSummaryService:
         # Get all stuck deals (days_in_stage > 30)
         statement = select(Deal).where(
             Deal.status == "open",
+            Deal.stage_id.in_(STUCK_STAGE_IDS),
             Deal.stage_change_time.is_not(None),
             Deal.stage_change_time < thirty_days_ago
         )
