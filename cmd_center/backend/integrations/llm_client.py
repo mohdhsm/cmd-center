@@ -188,11 +188,13 @@ class LLMClient:
             elif content.startswith("```"):
                 content = content.split("```")[1].split("```")[0].strip()
 
-            data = json.loads(content)
+            # Extract the first complete JSON object (handles extra text after JSON)
+            json_content = self._extract_first_json_object(content)
+            data = json.loads(json_content)
             return schema.model_validate(data)
 
         except (json.JSONDecodeError, ValidationError) as e:
-            logger.error(
+            logger.warning(
                 f"Failed to parse LLM response as {schema.__name__}: {e}",
                 extra={
                     "response_content": response.content[:500],
@@ -203,7 +205,7 @@ class LLMClient:
             if fallback_on_validation_error:
                 # Try to construct partial object
                 try:
-                    # Attempt to extract any valid JSON from response
+                    # Attempt to extract any valid JSON from response using regex
                     import re
                     json_match = re.search(r'\{.*\}', content, re.DOTALL)
                     if json_match:
@@ -215,6 +217,42 @@ class LLMClient:
             raise LLMValidationError(
                 f"Response does not match schema {schema.__name__}: {str(e)}"
             ) from e
+
+    def _extract_first_json_object(self, content: str) -> str:
+        """Extract the first complete JSON object from content.
+
+        Handles cases where LLM adds extra text after the JSON.
+        """
+        # Find the first '{' and match until the balanced '}'
+        start = content.find('{')
+        if start == -1:
+            return content
+
+        brace_count = 0
+        in_string = False
+        escape_next = False
+
+        for i, char in enumerate(content[start:], start):
+            if escape_next:
+                escape_next = False
+                continue
+            if char == '\\' and in_string:
+                escape_next = True
+                continue
+            if char == '"' and not escape_next:
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if char == '{':
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0:
+                    return content[start:i+1]
+
+        # If no balanced JSON found, return original
+        return content
 
     async def stream_completion(
         self,
