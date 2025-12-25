@@ -9,6 +9,18 @@ from typing import Optional
 from ..models.cashflow_models import DealForPrediction, DealPrediction
 
 
+def _normalize_datetime(dt: datetime) -> datetime:
+    """Strip timezone info for consistent comparisons."""
+    if dt is None:
+        return None
+    return dt.replace(tzinfo=None) if dt.tzinfo else dt
+
+
+def _days_between(dt1: datetime, dt2: datetime) -> int:
+    """Calculate days between two dates, handling timezone mismatches."""
+    return (_normalize_datetime(dt1) - _normalize_datetime(dt2)).days
+
+
 class DeterministicRules:
     """Rule-based prediction logic for cashflow.
 
@@ -156,7 +168,7 @@ class DeterministicRules:
 
         # Check 1: Invoice date reasonableness
         if prediction.predicted_invoice_date:
-            days_from_now = (prediction.predicted_invoice_date - today).days
+            days_from_now = _days_between(prediction.predicted_invoice_date, today)
             if days_from_now > 365:
                 warnings.append(f"Invoice date is {days_from_now} days in future (>1 year)")
             if days_from_now < -30:
@@ -164,13 +176,13 @@ class DeterministicRules:
 
         # Check 2: Payment date reasonableness
         if prediction.predicted_payment_date:
-            days_from_now = (prediction.predicted_payment_date - today).days
+            days_from_now = _days_between(prediction.predicted_payment_date, today)
             if days_from_now > 400:
                 warnings.append(f"Payment date is {days_from_now} days in future (>400 days)")
 
         # Check 3: Invoice-payment gap
         if prediction.predicted_invoice_date and prediction.predicted_payment_date:
-            gap_days = (prediction.predicted_payment_date - prediction.predicted_invoice_date).days
+            gap_days = _days_between(prediction.predicted_payment_date, prediction.predicted_invoice_date)
             if gap_days < 0:
                 warnings.append("Payment date is before invoice date")
             elif gap_days > 90:

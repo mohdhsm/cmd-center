@@ -74,6 +74,10 @@ class DealPrediction(BaseModel):
     assumptions: list[str] = Field(default_factory=list, description="Assumptions made")
     missing_fields: list[str] = Field(default_factory=list, description="Missing data fields")
     reasoning: Optional[str] = Field(None, description="LLM explanation")
+    # Additional context fields for display
+    owner_name: Optional[str] = Field(None, description="Deal owner name")
+    stage: Optional[str] = Field(None, description="Current stage name")
+    value_sar: Optional[float] = Field(None, description="Deal value in SAR")
 
 
 class PredictionMetadata(BaseModel):

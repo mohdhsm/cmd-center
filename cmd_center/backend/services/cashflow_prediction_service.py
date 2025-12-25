@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from sqlmodel import Session, select
 
-from ..db import get_session, Deal
+from ..db import engine, Deal
 from ..constants import PIPELINE_NAME_TO_ID
 from ..models.cashflow_models import (
     DealForPrediction,
@@ -32,7 +32,7 @@ from ..models.cashflow_models import (
 from ..integrations.llm_client import get_llm_client, LLMClient, LLMError
 from .prompt_registry import get_prompt_registry, PromptRegistry
 from .deterministic_rules import DeterministicRules
-from .db_queries import get_notes_for_deal
+from .db_queries import get_notes_for_deal, get_stage_by_id
 
 logger = logging.getLogger(__name__)
 
@@ -313,7 +313,7 @@ class CashflowPredictionService:
         Returns:
             List of DealForPrediction
         """
-        with next(get_session()) as session:
+        with Session(engine) as session:
             # Query open deals
             stmt = (
                 select(Deal)
@@ -334,10 +334,14 @@ class CashflowPredictionService:
                 notes = get_notes_for_deal(deal.id, limit=5)
                 recent_notes = [note.content for note in notes if note.content]
 
+                # Look up stage name
+                stage_obj = get_stage_by_id(deal.stage_id)
+                stage_name = stage_obj.name if stage_obj else f"Stage {deal.stage_id}"
+
                 deals_for_prediction.append(DealForPrediction(
                     deal_id=deal.id,
                     title=deal.title,
-                    stage=deal.stage_id,  # TODO: Map to stage name
+                    stage=stage_name,
                     stage_id=deal.stage_id,
                     value_sar=deal.value or 0.0,
                     owner_name=deal.owner_name or "Unknown",
@@ -396,6 +400,15 @@ class CashflowPredictionService:
             fallback_on_validation_error=True,
         )
 
+        # Enrich predictions with deal data (owner, stage, value)
+        deal_map = {deal.deal_id: deal for deal in deals}
+        for pred in result.predictions:
+            if pred.deal_id in deal_map:
+                deal = deal_map[pred.deal_id]
+                pred.owner_name = deal.owner_name
+                pred.stage = deal.stage
+                pred.value_sar = deal.value_sar
+
         return result.predictions
 
     def _fallback_prediction(
@@ -431,6 +444,9 @@ class CashflowPredictionService:
             assumptions=["Fallback: LLM error, using stage estimate or default 30 days"],
             missing_fields=["LLM prediction unavailable"],
             reasoning="Fallback prediction due to LLM error",
+            owner_name=deal.owner_name,
+            stage=deal.stage,
+            value_sar=deal.value_sar,
         )
 
     def _filter_by_horizon(
@@ -451,12 +467,21 @@ class CashflowPredictionService:
         """
         cutoff = today + timedelta(days=horizon_days)
 
+        def safe_compare(pred_date, cutoff_date) -> bool:
+            """Compare dates, handling timezone-naive vs aware mismatches."""
+            if pred_date is None:
+                return False
+            # Strip timezone info for comparison if needed
+            pred_naive = pred_date.replace(tzinfo=None) if pred_date.tzinfo else pred_date
+            cutoff_naive = cutoff_date.replace(tzinfo=None) if cutoff_date.tzinfo else cutoff_date
+            return pred_naive <= cutoff_naive
+
         filtered = []
         for pred in predictions:
             # Keep if invoice or payment within horizon
-            if pred.predicted_invoice_date and pred.predicted_invoice_date <= cutoff:
+            if safe_compare(pred.predicted_invoice_date, cutoff):
                 filtered.append(pred)
-            elif pred.predicted_payment_date and pred.predicted_payment_date <= cutoff:
+            elif safe_compare(pred.predicted_payment_date, cutoff):
                 filtered.append(pred)
 
         return filtered

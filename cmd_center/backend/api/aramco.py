@@ -9,6 +9,8 @@ from ..models import (
     OrderReceivedAnalysis,
     ComplianceStatus,
     CashflowBucket,
+    CashflowPredictionInput,
+    DealPrediction,
     OverdueSummaryResponse,
     StuckSummaryResponse,
     OrderReceivedSummaryResponse,
@@ -19,6 +21,7 @@ from ..services import (
     get_cashflow_service,
     get_aramco_summary_service,
 )
+from ..services.cashflow_prediction_service import get_cashflow_prediction_service
 
 router = APIRouter()
 
@@ -58,18 +61,44 @@ async def get_aramco_compliance():
 
 @router.get("/cashflow_projection", response_model=List[CashflowBucket])
 async def get_aramco_cashflow_projection(
-    period_type: str = Query("week", regex="^(week|month)$"),
-    periods_ahead: int = Query(12, ge=1, le=52),
+    period_type: str = Query("week", pattern="^(week|month)$"),
+    horizon_days: int = Query(90, ge=7, le=365),
 ):
-    """Get cashflow projection for Aramco pipeline."""
-#     service = get_cashflow_service()
-    # buckets = await service.get_cashflow_projection(
-        # "Aramco Projects",
-        # period_type=period_type,
-        # weeks_ahead=periods_ahead,
-    # )
-    buckets = []
-    return buckets
+    """Get LLM-powered cashflow projection for Aramco pipeline."""
+    service = get_cashflow_prediction_service()
+    result = await service.predict_cashflow(CashflowPredictionInput(
+        pipeline_name="Aramco Projects",
+        horizon_days=horizon_days,
+        granularity=period_type,
+    ))
+    return result.aggregated_forecast
+
+
+@router.get("/cashflow_critical_deals", response_model=List[DealPrediction])
+async def get_aramco_cashflow_critical_deals(
+    weeks_ahead: int = Query(2, ge=1, le=8),
+):
+    """Get deals predicted to invoice within the next N weeks.
+
+    Returns deals with 50%+ confidence, sorted by predicted invoice date.
+    """
+    service = get_cashflow_prediction_service()
+    result = await service.predict_cashflow(CashflowPredictionInput(
+        pipeline_name="Aramco Projects",
+        horizon_days=weeks_ahead * 7,
+        granularity="week",
+    ))
+
+    # Filter to predictions with 50%+ confidence
+    critical_deals = [
+        pred for pred in result.per_deal_predictions
+        if pred.predicted_invoice_date and pred.confidence >= 0.5
+    ]
+
+    # Sort by predicted invoice date (earliest first)
+    critical_deals.sort(key=lambda x: x.predicted_invoice_date)
+
+    return critical_deals
 
 
 # ============================================================================

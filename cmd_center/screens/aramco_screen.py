@@ -1,11 +1,12 @@
 """Aramco pipeline screen with multiple modes."""
 
+import asyncio
 import httpx
 from collections import defaultdict
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Static, Button, DataTable, Input, Footer,Select
+from textual.widgets import Static, Button, DataTable, Input, Footer, Select
 from textual.widgets._data_table import RowDoesNotExist
 from textual import log
 from .notes_modal_screen import NotesModalScreen
@@ -21,25 +22,45 @@ class AramcoPipelineScreen(Screen):
     Screen {
         layout: vertical;
     }
-    
+
     #main-row {
         height: 1fr;
     }
-    
+
     #sidebar {
         width: 32;
         border: solid grey;
         padding: 1;
     }
-    
+
     #content {
         border: solid grey;
         padding: 1;
     }
-    
+
     #sidebar-title, #content-title {
         text-style: bold;
         margin-bottom: 1;
+    }
+
+    #cashflow-buckets-container {
+        height: 40%;
+        border-bottom: solid grey;
+    }
+
+    #cashflow-deals-container {
+        height: 60%;
+    }
+
+    #cashflow-deals-label {
+        text-style: bold;
+        margin-top: 1;
+        margin-bottom: 1;
+        color: yellow;
+    }
+
+    .hidden {
+        display: none;
     }
     """
     
@@ -60,6 +81,7 @@ class AramcoPipelineScreen(Screen):
         self.current_mode = "overdue"
         self.selected_deal_id: str | None = None
         self._items_cache = []  # Cache for last fetched items to enable client-side sorting/grouping
+        self._cashflow_deals_cache = []  # Cache for cashflow critical deals
     
     def compose(self) -> ComposeResult:
         """Create child widgets."""
@@ -90,8 +112,12 @@ class AramcoPipelineScreen(Screen):
             with Vertical(id="content"):
                 yield Static("Aramco Pipeline", id="content-title")
                 yield Static("[1] Overdue  [2] Stuck  [3] Order  [4] Compliance  [5] Cashflow", id="tab-hints")
-                table = DataTable(id="aramco-table")
-                yield table
+                # Main table (used for all modes)
+                yield DataTable(id="aramco-table")
+                # Cashflow critical deals section (hidden by default)
+                with Vertical(id="cashflow-deals-container", classes="hidden"):
+                    yield Static("Critical Deals (Next 2 Weeks)", id="cashflow-deals-label")
+                    yield DataTable(id="cashflow-deals-table")
         
         yield Footer()
     
@@ -103,7 +129,14 @@ class AramcoPipelineScreen(Screen):
         """Load data based on current mode."""
         table = self.query_one("#aramco-table", DataTable)
         table.clear(columns=True)  # Clear both rows AND columns
-        
+
+        # Show/hide cashflow deals container based on mode
+        cashflow_container = self.query_one("#cashflow-deals-container", Vertical)
+        if self.current_mode == "cashflow":
+            cashflow_container.remove_class("hidden")
+        else:
+            cashflow_container.add_class("hidden")
+
         # Set columns based on mode
         if self.current_mode == "overdue":
             table.add_columns("ID", "Title", "Owner", "Stage", "Overdue days", "Value SAR")
@@ -112,26 +145,63 @@ class AramcoPipelineScreen(Screen):
             table.add_columns("ID", "Title", "Owner", "Stage", "Days in stage", "Last activity")
             endpoint = "/aramco/stuck"
         elif self.current_mode == "order":
-            table.add_columns("ID", "Title", "Owner", "stage","Days in stage")
+            table.add_columns("ID", "Title", "Owner", "stage", "Days in stage")
             endpoint = "/aramco/order_received"
         elif self.current_mode == "compliance":
             table.add_columns("ID", "Title", "Stage", "Survey?", "Quality docs?", "Comment")
             endpoint = "/aramco/compliance"
         elif self.current_mode == "cashflow":
-            table.add_columns("Period", "Expected invoice SAR", "# deals", "Comment")
+            table.add_columns("Period", "Expected SAR", "# Deals", "Comment")
             endpoint = "/aramco/cashflow_projection"
-        
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(f"{self.api_url}{endpoint}")
-                response.raise_for_status()
-                items = response.json()
-                self._items_cache = items  # Cache items for client-side sorting/grouping
+            # Also setup the critical deals table
+            deals_table = self.query_one("#cashflow-deals-table", DataTable)
+            deals_table.clear(columns=True)
+            deals_table.add_columns("ID", "Title", "Owner", "Stage", "Invoice Date", "Conf%", "Value SAR")
 
-            self.render_table(items)  # Render table with current data
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                if self.current_mode == "cashflow":
+                    # Fetch both buckets and critical deals in parallel
+                    buckets_resp, deals_resp = await asyncio.gather(
+                        client.get(f"{self.api_url}/aramco/cashflow_projection"),
+                        client.get(f"{self.api_url}/aramco/cashflow_critical_deals"),
+                        return_exceptions=True
+                    )
+
+                    # Handle buckets response
+                    if isinstance(buckets_resp, Exception):
+                        items = []
+                        table.add_row("Error", str(buckets_resp), "", "", key="error")
+                    else:
+                        buckets_resp.raise_for_status()
+                        items = buckets_resp.json()
+
+                    # Handle critical deals response
+                    if isinstance(deals_resp, Exception):
+                        self._cashflow_deals_cache = []
+                    else:
+                        deals_resp.raise_for_status()
+                        self._cashflow_deals_cache = deals_resp.json()
+
+                    self._items_cache = items
+                    self.render_table(items)
+                    self._render_cashflow_deals()
+                else:
+                    response = await client.get(f"{self.api_url}{endpoint}")
+                    response.raise_for_status()
+                    items = response.json()
+                    self._items_cache = items  # Cache items for client-side sorting/grouping
+                    self.render_table(items)
 
         except Exception as e:
-            table.add_row("Error loading data", str(e), "", "", "", "")
+            # Match error row columns to the current mode's column count
+            error_msg = str(e)[:80]  # Truncate long errors
+            if self.current_mode == "cashflow":
+                table.add_row("Error", error_msg, "", "")
+            elif self.current_mode == "order":
+                table.add_row("Error", error_msg, "", "", "")
+            else:
+                table.add_row("Error", error_msg, "", "", "", "")
 
     def render_table(self, items):
         """Render the table with optional sorting and grouping for overdue mode."""
@@ -235,13 +305,17 @@ class AramcoPipelineScreen(Screen):
                 elif self.current_mode == "cashflow":
                     table.add_row(
                         item["period"],
-                        str(item["expected_invoice_sar"]),
-                        str(item["num_deals"]),
+                        f"{item.get('expected_invoice_value_sar', 0):,.0f}",
+                        str(item.get("deal_count", 0)),
                         str(item.get("comment", "")),
                         key=item["period"]
                     )
 
         # Restore cursor: prefer by key, fallback to clamped row index
+        self._restore_cursor(table, cursor_key, cursor_row, cursor_col)
+
+    def _restore_cursor(self, table: DataTable, cursor_key, cursor_row, cursor_col):
+        """Restore cursor position after table re-render."""
         if cursor_key is not None and table.row_count > 0:
             try:
                 # Try to find the same row key in the new table
@@ -255,6 +329,40 @@ class AramcoPipelineScreen(Screen):
             # No previous key, just clamp the row index
             new_row = min(cursor_row, table.row_count - 1)
             table.move_cursor(row=new_row, column=min(cursor_col, len(table.ordered_columns) - 1))
+
+    def _render_cashflow_deals(self):
+        """Render the cashflow critical deals table."""
+        deals_table = self.query_one("#cashflow-deals-table", DataTable)
+        deals_table.clear()  # Clear rows, keep columns
+
+        if not self._cashflow_deals_cache:
+            deals_table.add_row("No deals", "predicted to invoice", "in next 2 weeks", "", "", "", "", key="empty")
+            return
+
+        for deal in self._cashflow_deals_cache:
+            # Format the predicted invoice date
+            invoice_date = deal.get("predicted_invoice_date", "")
+            if invoice_date:
+                # Handle ISO format datetime string
+                invoice_date = invoice_date[:10] if len(invoice_date) > 10 else invoice_date
+
+            # Format confidence as percentage
+            confidence = deal.get("confidence", 0)
+            conf_str = f"{confidence * 100:.0f}%"
+
+            # Truncate title if too long
+            title = deal.get("deal_title", "")[:35]
+
+            deals_table.add_row(
+                str(deal.get("deal_id", "")),
+                title,
+                str(deal.get("owner_name", "Unknown"))[:15] if deal.get("owner_name") else "Unknown",
+                str(deal.get("stage", ""))[:15] if deal.get("stage") else "",
+                invoice_date,
+                conf_str,
+                f"{deal.get('value_sar', 0):,.0f}" if deal.get("value_sar") else "0",
+                key=str(deal.get("deal_id", ""))
+            )
 
     async def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button press."""
