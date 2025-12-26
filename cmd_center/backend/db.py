@@ -210,6 +210,115 @@ class DealStageSpan(SQLModel, table=True):
     updated_at: Optional[datetime] = None
 
 
+# ============================================================================
+# CEO Dashboard - New Feature Tables
+# ============================================================================
+
+class Employee(SQLModel, table=True):
+    """Employee directory - foundation for people features.
+
+    Links to Pipedrive via pipedrive_owner_id for deal associations.
+    Supports organizational hierarchy via reports_to_employee_id.
+    """
+    __tablename__ = "employee"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    full_name: str = Field(index=True)
+    role_title: str
+    department: Optional[str] = Field(default=None, index=True)
+
+    # Organizational hierarchy
+    reports_to_employee_id: Optional[int] = Field(
+        default=None,
+        foreign_key="employee.id"
+    )
+
+    # Contact information
+    email: Optional[str] = None
+    phone: Optional[str] = None
+
+    # Status
+    is_active: bool = Field(default=True, index=True)
+
+    # Pipedrive integration - links to deal.owner_id
+    pipedrive_owner_id: Optional[int] = Field(default=None, index=True)
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[datetime] = None
+
+
+class Intervention(SQLModel, table=True):
+    """Audit log / flight recorder for all system events.
+
+    Every significant action in the system should create an intervention record.
+    This provides a complete audit trail for debugging, compliance, and analytics.
+    """
+    __tablename__ = "intervention"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        index=True
+    )
+
+    # Who performed the action
+    actor: str = Field(index=True)  # User name, email, or "system"
+
+    # What object was affected
+    object_type: str = Field(index=True)  # "employee", "task", "note", "deal", etc.
+    object_id: int = Field(index=True)
+
+    # What action was taken
+    action_type: str = Field(index=True)  # See ActionType enum in constants.py
+
+    # Result of the action
+    status: str = Field(default="done", index=True)  # "done", "failed", "planned"
+
+    # Human-readable summary
+    summary: str
+
+    # Additional structured data (JSON)
+    details_json: Optional[str] = None
+
+
+class Reminder(SQLModel, table=True):
+    """Unified reminder system for all target types.
+
+    Supports reminders for tasks, notes, documents, bonuses, and any future
+    entity types. Channels include in-app notifications and email.
+    """
+    __tablename__ = "reminder"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # What entity this reminder is for
+    target_type: str = Field(index=True)  # "task", "note", "document", "bonus", etc.
+    target_id: int = Field(index=True)
+
+    # When to remind
+    remind_at: datetime = Field(index=True)
+
+    # How to notify
+    channel: str = Field(default="in_app", index=True)  # "in_app", "email"
+
+    # Reminder content
+    message: Optional[str] = None
+
+    # Lifecycle status
+    status: str = Field(default="pending", index=True)  # "pending", "sent", "dismissed", "failed", "cancelled"
+    sent_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+
+    # Recurring support (future)
+    is_recurring: bool = Field(default=False)
+    recurrence_rule: Optional[str] = None  # iCal RRULE format for recurring
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[datetime] = None
+
+
 def init_db() -> None:
     """Create tables if they do not exist."""
     SQLModel.metadata.create_all(engine)
@@ -218,6 +327,7 @@ def init_db() -> None:
 __all__ = [
     "engine",
     "init_db",
+    # Pipedrive-synced tables
     "Pipeline",
     "Stage",
     "Deal",
@@ -228,4 +338,8 @@ __all__ = [
     "SyncMetadata",
     "DealChangeEvent",
     "DealStageSpan",
+    # CEO Dashboard tables
+    "Employee",
+    "Intervention",
+    "Reminder",
 ]

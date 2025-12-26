@@ -66,6 +66,22 @@ from .writer_models import (
     OrderReceivedResult,
     NoteSummaryResult,
 )
+from .employee_models import (
+    # Employee models
+    EmployeeBase,
+    EmployeeCreate,
+    EmployeeUpdate,
+    EmployeeResponse,
+    EmployeeWithAggregates,
+    EmployeeListResponse,
+    EmployeeFilters,
+    # Intervention models
+    InterventionBase,
+    InterventionCreate,
+    InterventionResponse,
+    InterventionListResponse,
+    InterventionFilters,
+)
 
 __all__ = [
     "DealBase",
@@ -128,4 +144,18 @@ __all__ = [
     "ComplianceResult",
     "OrderReceivedResult",
     "NoteSummaryResult",
+    # Employee Models
+    "EmployeeBase",
+    "EmployeeCreate",
+    "EmployeeUpdate",
+    "EmployeeResponse",
+    "EmployeeWithAggregates",
+    "EmployeeListResponse",
+    "EmployeeFilters",
+    # Intervention Models
+    "InterventionBase",
+    "InterventionCreate",
+    "InterventionResponse",
+    "InterventionListResponse",
+    "InterventionFilters",
 ]

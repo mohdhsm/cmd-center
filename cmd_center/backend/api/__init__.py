@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 from . import health, dashboard, aramco, commercial, owners, deals, emails, sync
+from . import employees, interventions, reminders
 
 # Create main API router
 api_router = APIRouter()
@@ -15,5 +16,10 @@ api_router.include_router(owners.router, prefix="/owners", tags=["owners"])
 api_router.include_router(deals.router, prefix="/deals", tags=["deals"])
 api_router.include_router(emails.router, prefix="/emails", tags=["emails"])
 api_router.include_router(sync.router, prefix="/sync", tags=["sync"])
+
+# CEO Dashboard routers
+api_router.include_router(employees.router, prefix="/employees", tags=["employees"])
+api_router.include_router(interventions.router, prefix="/interventions", tags=["interventions"])
+api_router.include_router(reminders.router, prefix="/reminders", tags=["reminders"])
 
 __all__ = ["api_router"]
