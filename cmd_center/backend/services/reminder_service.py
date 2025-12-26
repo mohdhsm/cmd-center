@@ -177,11 +177,14 @@ class ReminderService:
         if before is None:
             before = datetime.now(timezone.utc)
 
+        # Convert to naive datetime for SQLite comparison
+        before_naive = before.replace(tzinfo=None) if before.tzinfo else before
+
         with Session(db.engine) as session:
             query = (
                 select(Reminder)
                 .where(Reminder.status == ReminderStatus.PENDING.value)
-                .where(Reminder.remind_at <= before)
+                .where(Reminder.remind_at <= before_naive)
                 .order_by(Reminder.remind_at.asc())
                 .limit(limit)
             )

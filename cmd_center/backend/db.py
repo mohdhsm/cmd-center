@@ -319,6 +319,322 @@ class Reminder(SQLModel, table=True):
     updated_at: Optional[datetime] = None
 
 
+class Task(SQLModel, table=True):
+    """Task management for CEO dashboard.
+
+    Tasks can be linked to any entity (deal, employee, etc.) via target_type/target_id.
+    Supports assignment to employees and integration with the reminder system.
+    """
+    __tablename__ = "task"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Task content
+    title: str = Field(index=True)
+    description: Optional[str] = None
+
+    # Assignment
+    assignee_employee_id: Optional[int] = Field(
+        default=None,
+        foreign_key="employee.id",
+        index=True
+    )
+    created_by: Optional[str] = None  # Actor who created the task
+
+    # Status and priority
+    status: str = Field(default="open", index=True)  # open, in_progress, done, cancelled
+    priority: str = Field(default="medium", index=True)  # low, medium, high
+    is_critical: bool = Field(default=False, index=True)
+
+    # Timeline
+    due_at: Optional[datetime] = Field(default=None, index=True)
+    completed_at: Optional[datetime] = None
+
+    # Entity linking (optional - task can be standalone or linked)
+    target_type: Optional[str] = Field(default=None, index=True)
+    target_id: Optional[int] = Field(default=None, index=True)
+
+    # Archival
+    is_archived: bool = Field(default=False, index=True)
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[datetime] = None
+
+
+class InternalNote(SQLModel, table=True):
+    """Internal notes for any entity.
+
+    Notes can be linked to deals, employees, tasks, or any other entity.
+    Supports pinning, tagging, and review reminders.
+    """
+    __tablename__ = "internal_note"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Note content
+    content: str
+
+    # Author
+    created_by: Optional[str] = None  # Actor who created the note
+
+    # Entity linking (optional - note can be standalone or linked)
+    target_type: Optional[str] = Field(default=None, index=True)
+    target_id: Optional[int] = Field(default=None, index=True)
+
+    # Review reminder
+    review_at: Optional[datetime] = Field(default=None, index=True)
+
+    # Organization
+    pinned: bool = Field(default=False, index=True)
+    tags: Optional[str] = None  # Comma-separated tags
+
+    # Archival
+    is_archived: bool = Field(default=False, index=True)
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[datetime] = None
+
+
+# ============================================================================
+# Tracker Module - Phase 4 Tables
+# ============================================================================
+
+class LegalDocument(SQLModel, table=True):
+    """Legal document tracking for compliance.
+
+    Tracks documents like Commercial Registration, licenses, contracts, etc.
+    with expiry dates and renewal workflows.
+    """
+    __tablename__ = "legal_document"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Document info
+    title: str = Field(index=True)
+    document_type: str = Field(index=True)  # CR, license, contract, etc.
+    description: Optional[str] = None
+
+    # Validity
+    issue_date: Optional[datetime] = None
+    expiry_date: Optional[datetime] = Field(default=None, index=True)
+
+    # Status
+    status: str = Field(default="active", index=True)  # active, expired, renewal_in_progress, renewed
+
+    # Reference
+    reference_number: Optional[str] = None
+    issuing_authority: Optional[str] = None
+
+    # Ownership
+    responsible_employee_id: Optional[int] = Field(
+        default=None,
+        foreign_key="employee.id",
+        index=True
+    )
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[datetime] = None
+
+
+class LegalDocumentFile(SQLModel, table=True):
+    """File attachments for legal documents."""
+    __tablename__ = "legal_document_file"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    document_id: int = Field(foreign_key="legal_document.id", index=True)
+
+    # File info
+    filename: str
+    file_path: str  # Storage path
+    file_type: Optional[str] = None  # MIME type
+    file_size: Optional[int] = None  # Bytes
+
+    # Version tracking
+    version: int = Field(default=1)
+    is_current: bool = Field(default=True, index=True)
+
+    # Upload info
+    uploaded_by: Optional[str] = None
+    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class EmployeeBonus(SQLModel, table=True):
+    """Bonus tracking for employees.
+
+    Tracks promised bonuses, their conditions, and payment status.
+    """
+    __tablename__ = "employee_bonus"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Who
+    employee_id: int = Field(foreign_key="employee.id", index=True)
+
+    # What
+    title: str
+    description: Optional[str] = None
+    amount: float
+    currency: str = Field(default="SAR")
+
+    # Type and conditions
+    bonus_type: str = Field(default="performance", index=True)  # performance, project, annual, other
+    conditions: Optional[str] = None  # Conditions for earning the bonus
+
+    # Timeline
+    promised_date: datetime = Field(index=True)
+    due_date: Optional[datetime] = Field(default=None, index=True)
+
+    # Status
+    status: str = Field(default="promised", index=True)  # promised, approved, partial, paid, cancelled
+
+    # Approval
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[datetime] = None
+
+
+class EmployeeBonusPayment(SQLModel, table=True):
+    """Payment records for bonuses (supports partial payments)."""
+    __tablename__ = "employee_bonus_payment"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    bonus_id: int = Field(foreign_key="employee_bonus.id", index=True)
+
+    # Payment info
+    amount: float
+    payment_date: datetime = Field(index=True)
+    payment_method: Optional[str] = None  # bank_transfer, cash, etc.
+    reference: Optional[str] = None  # Transaction reference
+
+    # Who recorded it
+    recorded_by: Optional[str] = None
+    recorded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class EmployeeLogEntry(SQLModel, table=True):
+    """Activity log entries for employees.
+
+    Tracks achievements, issues, feedback, and other notable events.
+    """
+    __tablename__ = "employee_log_entry"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Who
+    employee_id: int = Field(foreign_key="employee.id", index=True)
+
+    # What
+    category: str = Field(index=True)  # achievement, issue, feedback, milestone, other
+    title: str
+    content: str
+
+    # Context
+    severity: Optional[str] = None  # For issues: low, medium, high
+    is_positive: bool = Field(default=True)  # Quick indicator
+
+    # Who logged it
+    logged_by: Optional[str] = None
+
+    # Timestamps
+    occurred_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class Skill(SQLModel, table=True):
+    """Skill definitions for employee competency tracking."""
+    __tablename__ = "skill"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Skill info
+    name: str = Field(index=True, unique=True)
+    description: Optional[str] = None
+    category: Optional[str] = Field(default=None, index=True)  # technical, soft, domain, etc.
+
+    # Active/inactive
+    is_active: bool = Field(default=True, index=True)
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class EmployeeSkillRating(SQLModel, table=True):
+    """Skill ratings for employees (tracks history)."""
+    __tablename__ = "employee_skill_rating"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Who and what
+    employee_id: int = Field(foreign_key="employee.id", index=True)
+    skill_id: int = Field(foreign_key="skill.id", index=True)
+
+    # Rating (1-5 scale)
+    rating: int = Field(ge=1, le=5)
+    notes: Optional[str] = None
+
+    # Who rated
+    rated_by: Optional[str] = None
+
+    # Timestamps
+    rated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
+
+
+# ============================================================================
+# Loop Engine Tables
+# ============================================================================
+
+class LoopRun(SQLModel, table=True):
+    """Tracks execution of monitoring loops."""
+    __tablename__ = "loop_run"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Loop identification
+    loop_name: str = Field(index=True)
+
+    # Execution timing
+    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
+    finished_at: Optional[datetime] = None
+
+    # Status: running, completed, failed
+    status: str = Field(default="running", index=True)
+
+    # Results
+    findings_count: int = Field(default=0)
+    error_message: Optional[str] = None
+
+
+class LoopFinding(SQLModel, table=True):
+    """Findings/alerts generated by monitoring loops."""
+    __tablename__ = "loop_finding"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Link to loop run
+    loop_run_id: int = Field(foreign_key="loop_run.id", index=True)
+
+    # Severity: info, warning, critical
+    severity: str = Field(index=True)
+
+    # What was found
+    target_type: str = Field(index=True)  # document, bonus, task, etc.
+    target_id: int
+    message: str
+    recommended_action: Optional[str] = None
+
+    # Deduplication signature (hash of key fields)
+    signature: Optional[str] = Field(default=None, index=True)
+
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 def init_db() -> None:
     """Create tables if they do not exist."""
     SQLModel.metadata.create_all(engine)
@@ -342,4 +658,17 @@ __all__ = [
     "Employee",
     "Intervention",
     "Reminder",
+    "Task",
+    "InternalNote",
+    # Tracker Module tables
+    "LegalDocument",
+    "LegalDocumentFile",
+    "EmployeeBonus",
+    "EmployeeBonusPayment",
+    "EmployeeLogEntry",
+    "Skill",
+    "EmployeeSkillRating",
+    # Loop Engine tables
+    "LoopRun",
+    "LoopFinding",
 ]

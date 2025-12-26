@@ -40,6 +40,89 @@ class ReminderChannel(str, Enum):
 
 
 # ============================================================================
+# Task Enums
+# ============================================================================
+
+class TaskStatus(str, Enum):
+    """Task lifecycle statuses."""
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    DONE = "done"
+    CANCELLED = "cancelled"
+
+
+class TaskPriority(str, Enum):
+    """Task priority levels."""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+# ============================================================================
+# Document Enums
+# ============================================================================
+
+class DocumentStatus(str, Enum):
+    """Legal document statuses."""
+    ACTIVE = "active"
+    EXPIRED = "expired"
+    RENEWAL_IN_PROGRESS = "renewal_in_progress"
+    RENEWED = "renewed"
+
+
+# ============================================================================
+# Bonus Enums
+# ============================================================================
+
+class BonusStatus(str, Enum):
+    """Bonus payment statuses."""
+    PROMISED = "promised"
+    APPROVED = "approved"
+    PARTIAL = "partial"
+    PAID = "paid"
+    CANCELLED = "cancelled"
+
+
+class BonusType(str, Enum):
+    """Types of bonuses."""
+    PERFORMANCE = "performance"
+    PROJECT = "project"
+    ANNUAL = "annual"
+    OTHER = "other"
+
+
+# ============================================================================
+# Employee Log Enums
+# ============================================================================
+
+class LogCategory(str, Enum):
+    """Categories for employee log entries."""
+    ACHIEVEMENT = "achievement"
+    ISSUE = "issue"
+    FEEDBACK = "feedback"
+    MILESTONE = "milestone"
+    OTHER = "other"
+
+
+# ============================================================================
+# Loop Engine Enums
+# ============================================================================
+
+class LoopStatus(str, Enum):
+    """Loop execution statuses."""
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class FindingSeverity(str, Enum):
+    """Severity levels for loop findings."""
+    INFO = "info"
+    WARNING = "warning"
+    CRITICAL = "critical"
+
+
+# ============================================================================
 # Action Types - Used for intervention/audit logging
 # ============================================================================
 
@@ -80,13 +163,22 @@ class ActionType(str, Enum):
     DOCUMENT_EXPIRED = "document_expired"
 
     # Bonuses
+    BONUS_CREATED = "bonus_created"
+    BONUS_UPDATED = "bonus_updated"
     BONUS_PROMISED = "bonus_promised"
     BONUS_APPROVED = "bonus_approved"
+    BONUS_PAYMENT_RECORDED = "bonus_payment_recorded"
     BONUS_PAID = "bonus_paid"
     BONUS_CANCELLED = "bonus_cancelled"
 
     # Employee logs
+    LOG_ENTRY_CREATED = "log_entry_created"
     EMPLOYEE_LOG_ADDED = "employee_log_added"
+
+    # Skills
+    SKILL_CREATED = "skill_created"
+    SKILL_UPDATED = "skill_updated"
+    SKILL_RATING_CREATED = "skill_rating_created"
     SKILL_RATED = "skill_rated"
 
     # System/Loop actions
@@ -148,6 +240,14 @@ __all__ = [
     "TargetType",
     "ReminderStatus",
     "ReminderChannel",
+    "TaskStatus",
+    "TaskPriority",
+    "DocumentStatus",
+    "BonusStatus",
+    "BonusType",
+    "LogCategory",
+    "LoopStatus",
+    "FindingSeverity",
     "ActionType",
     # Pipeline mappings
     "PIPELINE_NAME_TO_ID",

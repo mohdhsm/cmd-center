@@ -16,6 +16,29 @@ from .intervention_service import (
     log_action,
 )
 from .reminder_service import ReminderService, get_reminder_service
+from .task_service import TaskService, get_task_service
+from .note_service import NoteService, get_note_service
+
+# Tracker Module services
+from .document_service import DocumentService, get_document_service
+from .bonus_service import BonusService, get_bonus_service
+from .employee_log_service import EmployeeLogService, get_employee_log_service
+from .skill_service import SkillService, get_skill_service
+
+# Loop Engine services
+from .loop_engine import (
+    BaseLoop,
+    LoopRegistry,
+    LoopService,
+    loop_registry,
+    get_loop_service,
+)
+from .loops import (
+    DocsExpiryLoop,
+    BonusDueLoop,
+    TaskOverdueLoop,
+    ReminderProcessingLoop,
+)
 
 __all__ = [
     # Existing services
@@ -41,4 +64,27 @@ __all__ = [
     "log_action",
     "ReminderService",
     "get_reminder_service",
+    "TaskService",
+    "get_task_service",
+    "NoteService",
+    "get_note_service",
+    # Tracker Module services
+    "DocumentService",
+    "get_document_service",
+    "BonusService",
+    "get_bonus_service",
+    "EmployeeLogService",
+    "get_employee_log_service",
+    "SkillService",
+    "get_skill_service",
+    # Loop Engine services
+    "BaseLoop",
+    "LoopRegistry",
+    "LoopService",
+    "loop_registry",
+    "get_loop_service",
+    "DocsExpiryLoop",
+    "BonusDueLoop",
+    "TaskOverdueLoop",
+    "ReminderProcessingLoop",
 ]

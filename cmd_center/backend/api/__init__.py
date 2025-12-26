@@ -2,7 +2,9 @@
 
 from fastapi import APIRouter
 from . import health, dashboard, aramco, commercial, owners, deals, emails, sync
-from . import employees, interventions, reminders
+from . import employees, interventions, reminders, tasks, notes
+from . import documents, bonuses, employee_logs, skills
+from . import loops
 
 # Create main API router
 api_router = APIRouter()
@@ -21,5 +23,16 @@ api_router.include_router(sync.router, prefix="/sync", tags=["sync"])
 api_router.include_router(employees.router, prefix="/employees", tags=["employees"])
 api_router.include_router(interventions.router, prefix="/interventions", tags=["interventions"])
 api_router.include_router(reminders.router, prefix="/reminders", tags=["reminders"])
+api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
+api_router.include_router(notes.router, prefix="/notes", tags=["notes"])
+
+# Tracker Module routers
+api_router.include_router(documents.router)
+api_router.include_router(bonuses.router)
+api_router.include_router(employee_logs.router)
+api_router.include_router(skills.router)
+
+# Loop Engine routers
+api_router.include_router(loops.router)
 
 __all__ = ["api_router"]
