@@ -39,6 +39,7 @@ class Config(BaseSettings):
     # LLAMA cloud for ocr and other tasks
     llama_cloud_api_key: str = Field(default="", alias="Llama_cloud_api_key")
 
+    # For Odoo integration
 
 
     # FastAPI

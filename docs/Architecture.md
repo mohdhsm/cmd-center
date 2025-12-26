@@ -225,7 +225,16 @@ cmd_center/
 │   │   ├── owners.py
 │   │   ├── deals.py
 │   │   ├── emails.py
-│   │   └── sync.py                 # Sync trigger endpoints
+│   │   ├── sync.py                 # Sync trigger endpoints
+│   │   ├── employees.py            # Employee CRUD (CEO Dashboard)
+│   │   ├── reminders.py            # Unified reminder system
+│   │   ├── tasks.py                # Task management
+│   │   ├── notes.py                # Internal notes
+│   │   ├── documents.py            # Legal document tracking
+│   │   ├── bonuses.py              # Bonus tracking
+│   │   ├── employee_logs.py        # Employee log entries
+│   │   ├── skills.py               # Skills and ratings
+│   │   └── loops.py                # Loop engine endpoints
 │   │
 │   ├── services/                   # Business logic
 │   │   ├── deal_health_service.py
@@ -239,17 +248,48 @@ cmd_center/
 │   │   ├── aramco_summary_service.py  # CEO Radar summaries
 │   │   ├── pipedrive_sync.py       # Sync functions
 │   │   ├── sync_scheduler.py       # Background sync scheduler
-│   │   ├── writer_service.py       # ✨ NEW - LLM content generation
-│   │   ├── prompt_registry.py      # ✨ NEW - Centralized prompt management
-│   │   └── deterministic_rules.py  # Primary cashflow prediction engine
+│   │   ├── writer_service.py       # ✨ LLM content generation
+│   │   ├── prompt_registry.py      # ✨ Centralized prompt management
+│   │   ├── deterministic_rules.py  # Primary cashflow prediction engine
+│   │   │
+│   │   │   # CEO Dashboard Services
+│   │   ├── employee_service.py     # Employee CRUD
+│   │   ├── intervention_service.py # Audit logging
+│   │   ├── reminder_service.py     # Unified reminder system
+│   │   ├── task_service.py         # Task management with reminders
+│   │   ├── note_service.py         # Internal notes with reviews
+│   │   ├── document_service.py     # Legal document tracking
+│   │   ├── bonus_service.py        # Bonus and payment tracking
+│   │   ├── employee_log_service.py # Employee log entries
+│   │   ├── skill_service.py        # Skills and ratings
+│   │   │
+│   │   │   # Loop Engine
+│   │   ├── loop_engine.py          # BaseLoop, LoopRegistry, LoopService
+│   │   ├── loop_setup.py           # Loop registration on startup
+│   │   └── loops/                  # Individual loop implementations
+│   │       ├── __init__.py
+│   │       ├── docs_expiry_loop.py     # Document expiry monitoring
+│   │       ├── bonus_due_loop.py       # Bonus due date monitoring
+│   │       ├── task_overdue_loop.py    # Overdue task monitoring
+│   │       └── reminder_processing_loop.py  # Reminder processing
 │   │
 │   ├── models/                     # Pydantic models (API contracts)
 │   │   ├── deal_models.py          # Includes summary response models
 │   │   ├── cashflow_models.py      # Extended with prediction models
-│   │   ├── writer_models.py        # ✨ NEW - WriterService input/output models
+│   │   ├── writer_models.py        # WriterService input/output models
 │   │   ├── kpi_models.py
 │   │   ├── dashboard_models.py
-│   │   └── email_models.py
+│   │   ├── email_models.py
+│   │   │   # CEO Dashboard Models
+│   │   ├── employee_models.py      # Employee CRUD models
+│   │   ├── reminder_models.py      # Reminder system models
+│   │   ├── task_models.py          # Task management models
+│   │   ├── note_models.py          # Internal note models
+│   │   ├── document_models.py      # Legal document models
+│   │   ├── bonus_models.py         # Bonus and payment models
+│   │   ├── employee_log_models.py  # Employee log models
+│   │   ├── skill_models.py         # Skill and rating models
+│   │   └── loop_models.py          # Loop engine models
 │   │
 │   └── integrations/               # External API clients
 │       ├── config.py               # Pydantic settings
@@ -267,7 +307,7 @@ cmd_center/
 
 ## 4. Database Schema
 
-### 4.1 Core Tables
+### 4.1 Core Tables (Pipedrive Sync)
 
 | Table | Purpose | Sync Frequency |
 |-------|---------|----------------|
@@ -280,7 +320,36 @@ cmd_center/
 | `comment` | Comments on deals/activities | On-demand |
 | `sync_metadata` | Tracks sync state | Updated after each sync |
 
-### 4.2 Entity Relationships
+### 4.2 Management Tables (CEO Dashboard)
+
+| Table | Purpose | Key Features |
+|-------|---------|--------------|
+| `employee` | Employee directory | Hierarchy, departments, Pipedrive linking |
+| `intervention` | Audit log | All system actions tracked |
+| `reminder` | Unified reminders | Target-agnostic, multi-channel |
+| `task` | Task tracking | Assignees, priorities, due dates |
+| `internal_note` | Internal notes | Reviews, pinning, tags |
+
+### 4.3 Tracker Tables (Compliance & HR)
+
+| Table | Purpose | Key Features |
+|-------|---------|--------------|
+| `legal_document` | Document tracking | Expiry dates, status lifecycle |
+| `legal_document_file` | Document attachments | File metadata |
+| `employee_bonus` | Bonus tracking | Multi-currency, due dates |
+| `employee_bonus_payment` | Bonus payments | Partial payments, audit trail |
+| `employee_log_entry` | Employee logs | Achievements, issues, feedback |
+| `skill` | Skill definitions | Categories, descriptions |
+| `employee_skill_rating` | Skill ratings | Rating history, 1-5 scale |
+
+### 4.4 Loop Engine Tables
+
+| Table | Purpose | Key Features |
+|-------|---------|--------------|
+| `loop_run` | Loop execution records | Status, duration, findings count |
+| `loop_finding` | Loop findings/alerts | Severity, deduplication via signature |
+
+### 4.5 Entity Relationships
 
 ```
 pipeline (1) ──────< (many) stage
@@ -294,7 +363,7 @@ pipeline (1) ──────< (many) stage
                         └──────< (many) comment
 ```
 
-### 4.3 SQLModel Table Definitions
+### 4.6 SQLModel Table Definitions (Pipedrive)
 
 ```python
 class Pipeline(SQLModel, table=True):
@@ -391,21 +460,158 @@ class SyncMetadata(SQLModel, table=True):
     error_message: Optional[str] = None
 ```
 
+### 4.7 SQLModel Table Definitions (CEO Dashboard)
+
+```python
+class Employee(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    full_name: str
+    role_title: str
+    department: Optional[str] = None
+    reports_to_employee_id: Optional[int] = Field(default=None, foreign_key="employee.id")
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    is_active: bool = True
+    pipedrive_owner_id: Optional[int] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+class Intervention(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    created_at: datetime
+    actor: str
+    object_type: str
+    object_id: int
+    action_type: str
+    status: str = "done"
+    summary: str
+    details_json: Optional[str] = None
+
+class Reminder(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    target_type: str  # "task", "note", "document", "bonus", etc.
+    target_id: int
+    remind_at: datetime
+    channel: str = "in_app"  # "in_app", "email"
+    message: Optional[str] = None
+    status: str = "pending"  # "pending", "sent", "dismissed", "failed", "cancelled"
+    sent_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    is_recurring: bool = False
+    recurrence_rule: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+class Task(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    description: Optional[str] = None
+    assignee_employee_id: Optional[int] = Field(default=None, foreign_key="employee.id")
+    created_by: Optional[str] = None
+    status: str = "open"  # open, in_progress, done, cancelled
+    priority: str = "medium"  # low, medium, high
+    is_critical: bool = False
+    due_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    target_type: Optional[str] = None
+    target_id: Optional[int] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    is_archived: bool = False
+
+class InternalNote(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    content: str
+    created_by: Optional[str] = None
+    target_type: Optional[str] = None
+    target_id: Optional[int] = None
+    review_at: Optional[datetime] = None
+    pinned: bool = False
+    tags: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    is_archived: bool = False
+
+class LegalDocument(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    document_type: str  # license, contract, insurance, certification, permit, other
+    description: Optional[str] = None
+    expiry_date: Optional[datetime] = None
+    status: str = "active"  # draft, active, renewal_in_progress, expired, archived
+    responsible_employee_id: Optional[int] = Field(default=None, foreign_key="employee.id")
+    notes: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+class EmployeeBonus(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    employee_id: int = Field(foreign_key="employee.id")
+    title: str
+    description: Optional[str] = None
+    amount: float
+    currency: str = "SAR"
+    due_date: Optional[datetime] = None
+    status: str = "pending"  # pending, partial, paid, cancelled
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+class Skill(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    category: str
+    description: Optional[str] = None
+    is_active: bool = True
+    created_at: datetime
+
+class EmployeeSkillRating(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    employee_id: int = Field(foreign_key="employee.id")
+    skill_id: int = Field(foreign_key="skill.id")
+    rating: int  # 1-5
+    rated_by: Optional[str] = None
+    notes: Optional[str] = None
+    rated_at: datetime
+
+class LoopRun(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    loop_name: str
+    started_at: datetime
+    finished_at: Optional[datetime] = None
+    status: str = "running"  # running, completed, failed
+    findings_count: int = 0
+    error_message: Optional[str] = None
+
+class LoopFinding(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    loop_run_id: int = Field(foreign_key="loop_run.id")
+    severity: str  # info, warning, critical
+    target_type: str
+    target_id: int
+    message: str
+    recommended_action: Optional[str] = None
+    signature: Optional[str] = None  # SHA256 for deduplication
+    created_at: datetime
+```
+
 ---
 
 ## 5. Domain Models
 
 ### 5.1 Database Models (SQLModel - in `db.py`)
 
-Used for database operations:
-- `Pipeline`
-- `Stage`
-- `Deal`
-- `Note`
-- `Activity`
-- `File`
-- `Comment`
-- `SyncMetadata`
+**Pipedrive Sync Models:**
+- `Pipeline`, `Stage`, `Deal`, `Note`, `Activity`, `File`, `Comment`, `SyncMetadata`
+
+**CEO Dashboard Models:**
+- `Employee`, `Intervention`, `Reminder`, `Task`, `InternalNote`
+
+**Tracker Models:**
+- `LegalDocument`, `LegalDocumentFile`, `EmployeeBonus`, `EmployeeBonusPayment`
+- `EmployeeLogEntry`, `Skill`, `EmployeeSkillRating`
+
+**Loop Engine Models:**
+- `LoopRun`, `LoopFinding`
 
 ### 5.2 API Models (Pydantic - in `models/`)
 
@@ -542,6 +748,112 @@ def get_overdue_deals(pipeline_name: str, min_days: int = 7) -> list[OverdueDeal
 | `/sync/trigger` | POST | Trigger immediate sync |
 | `/sync/trigger/{entity}` | POST | Trigger sync for specific entity |
 
+### 6.5 CEO Dashboard Endpoints (Management)
+
+#### Employees
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/employees` | GET | List employees with filters |
+| `/employees/{id}` | GET | Get employee details |
+| `/employees` | POST | Create employee |
+| `/employees/{id}` | PUT | Update employee |
+| `/employees/{id}` | DELETE | Soft delete (deactivate) |
+
+#### Reminders
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/reminders` | POST | Create reminder |
+| `/reminders` | GET | List reminders with filters |
+| `/reminders/pending` | GET | List pending reminders |
+| `/reminders/{id}` | GET | Get reminder details |
+| `/reminders/{id}/dismiss` | POST | Dismiss reminder |
+| `/reminders/{id}` | DELETE | Cancel reminder |
+
+#### Tasks
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/tasks` | POST | Create task (with optional reminder) |
+| `/tasks` | GET | List tasks with filters |
+| `/tasks/{id}` | GET | Get task details |
+| `/tasks/{id}` | PUT | Update task |
+| `/tasks/{id}/complete` | POST | Mark complete (cancels reminders) |
+| `/tasks/{id}` | DELETE | Cancel task |
+| `/tasks/{id}/reminders` | GET | List task reminders |
+
+#### Notes
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/notes` | POST | Create note (with optional review) |
+| `/notes` | GET | List notes with filters |
+| `/notes/{id}` | GET | Get note details |
+| `/notes/{id}` | PUT | Update note |
+| `/notes/{id}` | DELETE | Archive note |
+| `/notes/{id}/reminders` | GET | List note reminders |
+
+### 6.6 CEO Dashboard Endpoints (Tracker)
+
+#### Documents
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/documents` | POST | Create document |
+| `/documents` | GET | List documents with filters |
+| `/documents/expiring` | GET | Documents expiring within N days |
+| `/documents/{id}` | GET | Get document details |
+| `/documents/{id}` | PUT | Update document |
+| `/documents/{id}` | DELETE | Archive document |
+| `/documents/{id}/files` | POST | Attach file |
+| `/documents/{id}/files` | GET | List attachments |
+
+#### Bonuses
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/bonuses` | POST | Create bonus |
+| `/bonuses` | GET | List bonuses with filters |
+| `/bonuses/unpaid` | GET | List unpaid bonuses |
+| `/bonuses/{id}` | GET | Get bonus details |
+| `/bonuses/{id}` | PUT | Update bonus |
+| `/bonuses/{id}/payments` | POST | Record payment |
+| `/bonuses/{id}/payments` | GET | List payments |
+| `/bonuses/{id}` | DELETE | Cancel bonus |
+
+#### Employee Logs
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/employee-logs` | POST | Create log entry |
+| `/employee-logs` | GET | List logs with filters |
+| `/employee-logs/{id}` | GET | Get log details |
+| `/employee-logs/{id}` | PUT | Update log |
+| `/employee-logs/{id}` | DELETE | Delete log |
+
+#### Skills
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/skills` | POST | Create skill definition |
+| `/skills` | GET | List skills by category |
+| `/skills/{id}` | GET | Get skill details |
+| `/skills/{id}` | PUT | Update skill |
+| `/skills/{id}` | DELETE | Deactivate skill |
+| `/skills/{id}/ratings` | POST | Rate employee |
+| `/skills/{id}/ratings` | GET | Get ratings for skill |
+| `/employees/{id}/skills` | GET | Employee skill card |
+
+### 6.7 Loop Engine Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/loops/status` | GET | Get all loops with run statistics |
+| `/loops/{name}/run` | POST | Manually trigger specific loop |
+| `/loops/run-all` | POST | Trigger all enabled loops |
+| `/loops/runs` | GET | List loop runs with filters |
+| `/loops/runs/{id}` | GET | Get run details with findings |
+| `/loops/findings` | GET | List all findings with filters |
+
+### 6.8 Interventions (Audit Log)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/interventions` | GET | List audit log entries with filters |
+
 ---
 
 ## 7. Services
@@ -560,6 +872,22 @@ def get_overdue_deals(pipeline_name: str, min_days: int = 7) -> list[OverdueDeal
 | `writer_service` | `LLMClient`, `PromptRegistry`, `db_queries` (read-only) |
 | `llm_analysis_service` | **⚠️ DEPRECATED** - `get_notes_for_deal` + llm_client (use WriterService instead) |
 | `db_queries` | SQLite read operations |
+| **CEO Dashboard Services** | |
+| `employee_service` | Employee CRUD, hierarchy management |
+| `intervention_service` | Audit logging via `log_action()` |
+| `reminder_service` | Unified reminder CRUD, target linking |
+| `task_service` | Task CRUD, uses `reminder_service` |
+| `note_service` | Note CRUD, uses `reminder_service` |
+| `document_service` | Document CRUD, file attachments |
+| `bonus_service` | Bonus CRUD, payment tracking |
+| `employee_log_service` | Employee log entries |
+| `skill_service` | Skill definitions, employee ratings |
+| **Loop Engine** | |
+| `loop_engine` | BaseLoop, LoopRegistry, LoopService |
+| `docs_expiry_loop` | Uses `document_service`, `reminder_service`, `task_service` |
+| `bonus_due_loop` | Uses `bonus_service`, `reminder_service` |
+| `task_overdue_loop` | Uses `task_service`, `reminder_service` |
+| `reminder_processing_loop` | Uses `reminder_service` |
 
 ### 7.2 Service Characteristics
 
@@ -680,6 +1008,111 @@ Rule-based prediction logic for cashflow (primary prediction engine):
 - High (0.85): Late stages (Awaiting GR/GCC/MDD)
 - Medium (0.70): Normal stages
 - Low (0.50): Unknown stages or stuck deals
+
+### 7.4 CEO Dashboard Services
+
+#### employee_service.py
+- `create_employee(data)` → `EmployeeResponse`
+- `get_employee(id)` → `Optional[EmployeeResponse]`
+- `get_employees(filters)` → `EmployeeListResponse`
+- `update_employee(id, data)` → `Optional[EmployeeResponse]`
+- `delete_employee(id)` → `bool` (soft delete)
+
+#### intervention_service.py
+- `log_action(actor, object_type, object_id, action_type, summary, details)` → `None`
+- `get_interventions(filters)` → `InterventionListResponse`
+
+#### reminder_service.py
+- `create_reminder(data, actor)` → `ReminderResponse`
+- `get_pending_reminders(before, limit)` → `list[ReminderResponse]`
+- `get_reminders_for_target(target_type, target_id)` → `list[ReminderResponse]`
+- `dismiss_reminder(id, actor)` → `Optional[ReminderResponse]`
+- `cancel_reminder(id, actor)` → `bool`
+- `cancel_reminders_for_target(target_type, target_id)` → `int`
+- `mark_reminder_sent(id)` → `Optional[ReminderResponse]`
+- `mark_reminder_failed(id, error)` → `Optional[ReminderResponse]`
+
+#### task_service.py
+- `create_task(data, actor)` → `TaskResponse` (auto-creates reminder if due_at set)
+- `get_task(id)` → `Optional[TaskResponse]`
+- `get_tasks(filters)` → `TaskListResponse`
+- `complete_task(id, actor)` → `Optional[TaskResponse]` (cancels reminders)
+- `cancel_task(id, actor)` → `bool`
+- `get_overdue_tasks()` → `list[TaskResponse]`
+
+#### note_service.py
+- `create_note(data, actor)` → `NoteResponse` (auto-creates reminder if review_at set)
+- `get_note(id)` → `Optional[NoteResponse]`
+- `get_notes(filters)` → `NoteListResponse` (pinned first)
+- `archive_note(id, actor)` → `bool` (cancels reminders)
+
+#### document_service.py
+- `create_document(data, actor)` → `DocumentResponse`
+- `get_expiring_documents(days)` → `list[DocumentResponse]`
+- `attach_file(document_id, data)` → `DocumentFileResponse`
+
+#### bonus_service.py
+- `create_bonus(data, actor)` → `BonusResponse`
+- `record_payment(bonus_id, data, actor)` → `BonusPaymentResponse` (auto-updates status)
+- `get_unpaid_bonuses()` → `list[BonusResponse]`
+
+#### skill_service.py
+- `create_skill(data, actor)` → `SkillResponse`
+- `rate_employee(skill_id, data, actor)` → `SkillRatingResponse`
+- `get_employee_skill_card(employee_id)` → `list[SkillWithRating]`
+- `get_latest_ratings(skill_id)` → `list[SkillRatingResponse]`
+
+### 7.5 Loop Engine
+
+#### loop_engine.py
+
+**BaseLoop (Abstract Class):**
+```python
+class BaseLoop(ABC):
+    name: str           # Unique loop identifier
+    description: str    # Human-readable description
+    interval_minutes: int  # How often to run
+    enabled: bool = True
+
+    @abstractmethod
+    def execute(self, session: Session) -> None:
+        """Execute the loop logic. Override in subclass."""
+        pass
+
+    def run(self) -> LoopRunResponse:
+        """Run the loop with automatic tracking."""
+        # Creates LoopRun record, calls execute(), handles errors
+
+    def add_finding(self, session, severity, target_type, target_id, message, recommended_action) -> Optional[LoopFinding]:
+        """Add finding with 24-hour deduplication."""
+```
+
+**LoopRegistry:**
+- `register(loop)` - Register a loop instance
+- `get(name)` → `Optional[BaseLoop]`
+- `all()` → `list[BaseLoop]`
+- `run_all()` → `list[LoopRunResponse]`
+- `run_by_name(name)` → `Optional[LoopRunResponse]`
+
+**LoopService:**
+- `get_loop_runs(filters)` → `LoopRunListResponse`
+- `get_loop_run(id)` → `Optional[LoopRunWithFindings]`
+- `get_findings(filters)` → `LoopFindingListResponse`
+- `get_status()` → `LoopStatusResponse`
+
+#### Loop Implementations
+
+| Loop | Interval | Thresholds | Actions |
+|------|----------|------------|---------|
+| `docs_expiry_loop` | 6 hours | 30 days warning, 7 days critical | Creates reminders + renewal tasks |
+| `bonus_due_loop` | 12 hours | 30 days warning, 7 days critical | Creates payment reminders |
+| `task_overdue_loop` | 1 hour | 24 hours warning, 0 hours critical | Creates escalation reminders |
+| `reminder_processing_loop` | 5 minutes | N/A | Sends pending reminders via email/in-app |
+
+**Finding Deduplication:**
+- Signature = SHA256(loop_name + severity + target_type + target_id + message)
+- Duplicate findings within 24 hours are skipped
+- Prevents alert fatigue from repeated runs
 
 ---
 
@@ -931,6 +1364,7 @@ The Aramco screen supports:
 
 ## 11. Key Features Implemented
 
+### 11.1 Pipedrive Integration
 ✅ **Dashboard** - Today's focus with priority items
 ✅ **Aramco Pipeline** - 5 analysis modes (Overdue, Stuck, Order, Compliance, Cashflow)
 ✅ **Commercial Pipeline** - Inactive deals + LLM summaries
@@ -944,6 +1378,35 @@ The Aramco screen supports:
 ✅ **Multi-Pipeline Support** - Aramco + Commercial focused
 ✅ **Local Caching** - SQLite for fast reads, async sync for updates
 ✅ **Notes Modal** - View and add notes to deals
+
+### 11.2 CEO Dashboard Features (December 2024)
+
+**Foundation:**
+✅ **Employee Directory** - Full CRUD with hierarchy and department management
+✅ **Audit Logging** - All system actions tracked via intervention service
+
+**Management Module:**
+✅ **Task Management** - Tasks with assignees, priorities, due dates, and reminder integration
+✅ **Internal Notes** - Notes with review reminders, pinning, and tagging
+✅ **Unified Reminders** - Target-agnostic reminder system (in-app, email)
+
+**Tracker Module:**
+✅ **Document Tracking** - Legal documents with expiry dates and file attachments
+✅ **Bonus Management** - Bonus tracking with partial payments and status auto-calculation
+✅ **Employee Logs** - Achievement, issue, and feedback logging
+✅ **Skills & Ratings** - Skill definitions with employee rating history
+
+**Loop Engine:**
+✅ **Background Monitoring** - Automated loops for proactive alerts
+✅ **Document Expiry Loop** - Monitors documents expiring within 30 days
+✅ **Bonus Due Loop** - Monitors bonuses due within 30 days
+✅ **Task Overdue Loop** - Monitors overdue and soon-due tasks
+✅ **Reminder Processing** - Processes and sends pending reminders
+✅ **Finding Deduplication** - 24-hour deduplication using SHA256 signatures
+
+### 11.3 Test Coverage
+✅ **293 tests passing** - Unit tests + integration tests across all phases
+✅ **pytest infrastructure** - Async support, in-memory SQLite, reusable fixtures
 
 ---
 
@@ -1051,27 +1514,43 @@ COMMERCIAL_PIPELINE_NAME=pipeline
 - Main sync: `cmd_center/backend/services/pipedrive_sync.py`
 - Query helper: `cmd_center/backend/services/db_queries.py`
 - Summary service: `cmd_center/backend/services/aramco_summary_service.py`
-- **LLM Services (NEW):**
+- **LLM Services:**
   - Writer service: `cmd_center/backend/services/writer_service.py`
   - Cashflow prediction: `cmd_center/backend/services/cashflow_prediction_service.py`
   - Prompt registry: `cmd_center/backend/services/prompt_registry.py`
   - Deterministic rules: `cmd_center/backend/services/deterministic_rules.py`
+- **CEO Dashboard Services:**
+  - Employee: `cmd_center/backend/services/employee_service.py`
+  - Intervention: `cmd_center/backend/services/intervention_service.py`
+  - Reminder: `cmd_center/backend/services/reminder_service.py`
+  - Task: `cmd_center/backend/services/task_service.py`
+  - Note: `cmd_center/backend/services/note_service.py`
+  - Document: `cmd_center/backend/services/document_service.py`
+  - Bonus: `cmd_center/backend/services/bonus_service.py`
+  - Employee Log: `cmd_center/backend/services/employee_log_service.py`
+  - Skill: `cmd_center/backend/services/skill_service.py`
+- **Loop Engine:**
+  - Engine: `cmd_center/backend/services/loop_engine.py`
+  - Setup: `cmd_center/backend/services/loop_setup.py`
+  - Loops: `cmd_center/backend/services/loops/`
 
 **API:**
 - All endpoints: `cmd_center/backend/api/`
 - Routing: `cmd_center/backend/api/__init__.py`
+- **CEO Dashboard APIs:** `employees.py`, `reminders.py`, `tasks.py`, `notes.py`, `documents.py`, `bonuses.py`, `employee_logs.py`, `skills.py`, `loops.py`
 
 **Integrations:**
 - All clients: `cmd_center/backend/integrations/`
 - LLM client (refactored): `cmd_center/backend/integrations/llm_client.py`
-- LLM observability (NEW): `cmd_center/backend/integrations/llm_observability.py`
-- LLM circuit breaker (NEW): `cmd_center/backend/integrations/llm_circuit_breaker.py`
+- LLM observability: `cmd_center/backend/integrations/llm_observability.py`
+- LLM circuit breaker: `cmd_center/backend/integrations/llm_circuit_breaker.py`
 - Config: `cmd_center/backend/integrations/config.py`
 
 **Models:**
 - All models: `cmd_center/backend/models/`
-- Writer models (NEW): `cmd_center/backend/models/writer_models.py`
+- Writer models: `cmd_center/backend/models/writer_models.py`
 - Cashflow models (extended): `cmd_center/backend/models/cashflow_models.py`
+- **CEO Dashboard Models:** `employee_models.py`, `reminder_models.py`, `task_models.py`, `note_models.py`, `document_models.py`, `bonus_models.py`, `employee_log_models.py`, `skill_models.py`, `loop_models.py`
 
 **Screens:**
 - All screens: `cmd_center/screens/`
@@ -1079,8 +1558,14 @@ COMMERCIAL_PIPELINE_NAME=pipeline
 **Database Cache:**
 - SQLite: `pipedrive_cache.db`
 
+**Tests:**
+- All tests: `tests/`
+- Config: `tests/conftest.py`
+- Integration tests: `tests/integration/`
+
 **Documentation:**
 - Architecture: `docs/Architecture.md` (this file)
+- Implementation Summary: `docs/implementation_summary.md`
 - LLM Implementation: `docs/LLM_Architecture_Implementation.md`
 - LLM Quick Reference: `docs/LLM_Quick_Reference.md`
 
