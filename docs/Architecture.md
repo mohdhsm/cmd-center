@@ -53,10 +53,10 @@ The application follows a **5-layer architecture** with clear separation of conc
 │  Layer 3: Service Layer                                                 │
 │  - Business logic (deal_health, cashflow, kpis, emails, summaries)      │
 │  - WriterService: LLM-powered content generation                        │
-│  - CashflowPredictionService: Intelligent forecasting                   │
+│  - CashflowPredictionService: Deterministic forecasting (no LLM)        │
 │  - Calls query layer for data                                           │
-│  - Uses PromptRegistry for LLM prompts                                  │
-│  - Uses DeterministicRules for rule-based logic                         │
+│  - Uses PromptRegistry for LLM prompts (WriterService only)             │
+│  - Uses DeterministicRules for cashflow predictions                     │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
@@ -91,7 +91,8 @@ The application follows a **5-layer architecture** with clear separation of conc
 | UI (Textual) | FastAPI endpoints | Services, Database, Pipedrive |
 | API (FastAPI) | Services | Database directly, Pipedrive |
 | Services | db_queries.py, WriterService, CashflowPredictionService, PromptRegistry | Pipedrive directly |
-| WriterService/CashflowPredictionService | LLMClient, PromptRegistry, DeterministicRules, db_queries | Pipedrive, direct LLM business logic |
+| WriterService | LLMClient, PromptRegistry, db_queries | Pipedrive, direct LLM business logic |
+| CashflowPredictionService | DeterministicRules, db_queries | LLMClient (disabled), Pipedrive |
 | db_queries.py | SQLite (read-only) | Pipedrive, external APIs |
 | LLMClient | OpenRouter API (infrastructure only) | Business logic, prompts |
 | pipedrive_sync.py | Pipedrive API, SQLite (write) | Services, API |
@@ -230,7 +231,7 @@ cmd_center/
 │   │   ├── deal_health_service.py
 │   │   ├── llm_analysis_service.py  # ⚠️ DEPRECATED - use WriterService
 │   │   ├── cashflow_service.py
-│   │   ├── cashflow_prediction_service.py  # ✨ NEW - LLM-powered forecasting
+│   │   ├── cashflow_prediction_service.py  # Deterministic forecasting (LLM disabled)
 │   │   ├── owner_kpi_service.py
 │   │   ├── email_service.py
 │   │   ├── dashboard_service.py
@@ -240,7 +241,7 @@ cmd_center/
 │   │   ├── sync_scheduler.py       # Background sync scheduler
 │   │   ├── writer_service.py       # ✨ NEW - LLM content generation
 │   │   ├── prompt_registry.py      # ✨ NEW - Centralized prompt management
-│   │   └── deterministic_rules.py  # ✨ NEW - Rule-based prediction logic
+│   │   └── deterministic_rules.py  # Primary cashflow prediction engine
 │   │
 │   ├── models/                     # Pydantic models (API contracts)
 │   │   ├── deal_models.py          # Includes summary response models
@@ -428,9 +429,9 @@ For executive dashboard summaries:
 - `StuckSummaryResponse` - Stuck snapshot, PM control metrics, worst deals, bottlenecks
 - `OrderReceivedSummaryResponse` - Order snapshot, PM acceleration, blockers, fast wins
 
-### 5.4 LLM-Powered Cashflow Prediction Models (NEW)
+### 5.4 Cashflow Prediction Models
 
-For intelligent cashflow forecasting:
+For deterministic cashflow forecasting (LLM disabled):
 
 **Input Models:**
 - `DealForPrediction` - Deal data prepared for prediction
@@ -552,7 +553,7 @@ def get_overdue_deals(pipeline_name: str, min_days: int = 7) -> list[OverdueDeal
 | `deal_health_service` | `get_overdue_deals_for_pipeline`, `get_stuck_deals_for_pipeline`, `get_deal_by_id`, `get_notes_for_deal` |
 | `aramco_summary_service` | Direct SQLModel sessions, calculates PM metrics, snapshots |
 | `cashflow_service` | `get_deals_near_invoicing`, `get_deals_by_stage` |
-| `cashflow_prediction_service` | `db_queries`, `LLMClient`, `PromptRegistry`, `DeterministicRules` |
+| `cashflow_prediction_service` | `db_queries`, `DeterministicRules` (LLM disabled) |
 | `owner_kpi_service` | `get_deals_by_owner`, PipedriveClient for activities |
 | `dashboard_service` | Aggregates from other services |
 | `email_service` | Uses other services + WriterService (planned) |
@@ -606,20 +607,20 @@ Features:
 - Graceful fallbacks on LLM failures
 - Concurrent batch processing with rate limiting
 
-#### cashflow_prediction_service.py (NEW)
-Intelligent cashflow forecasting with LLM + deterministic rules:
+#### cashflow_prediction_service.py
+Deterministic cashflow forecasting (LLM disabled):
 - `predict_cashflow(input: CashflowPredictionInput)` → `CashflowPredictionResult`
 - `predict_deal_dates(deals, options, today)` → `List[DealPrediction]`
 - `generate_forecast_table(predictions, options)` → `ForecastTable`
 - `explain_assumptions(predictions)` → `AssumptionsReport`
 
 Features:
-- Hybrid approach: LLM predictions + rule-based overrides
+- Pure deterministic rules (LLM code commented out)
 - Stage-based cycle time estimates (DeterministicRules)
-- Pre-checks for known cases (e.g., already invoiced)
+- Staleness adjustments for stuck deals
 - Post-processing validation and sanity checks
 - Confidence-based filtering
-- Explainability reporting
+- Explainability reporting with assumptions
 
 #### prompt_registry.py (NEW)
 Centralized prompt template management:
@@ -644,19 +645,41 @@ Features:
 - Version support for A/B testing
 - Metadata tracking (model tier, temperature, tokens)
 
-#### deterministic_rules.py (NEW)
-Rule-based prediction logic for cashflow:
+#### deterministic_rules.py
+Rule-based prediction logic for cashflow (primary prediction engine):
+- `predict_deal(deal, today)` → `DealPrediction`
 - `precheck_deal(deal, today)` → `Optional[DealPrediction]`
 - `apply_overrides(prediction, deal, today)` → `DealPrediction`
 - `validate_prediction(prediction, today)` → `list[str]` (warnings)
 - `get_stage_estimate(stage)` → `Optional[int]` (days)
 
-**Stage Cycle Times:**
-- Order Received: 10 days
-- Under Progress: 22 days
-- Awaiting GR: 5 days
-- Production/Supplying: 45 days
-- Default payment terms: 37 days
+**Stage Cycle Times (Realistic estimates, days to invoice):**
+| Stage | Days |
+|-------|------|
+| Order Received (< 100 SQM) | 36 |
+| Order Received (100-400 SQM) | 42 |
+| Order Received (> 400 SQM) | 50 |
+| Approved | 29 |
+| Awaiting Payment | 27 |
+| Awaiting Site Readiness | 22 |
+| Everything Ready | 17 |
+| Under Progress | 12 |
+| Awaiting MDD | 12 |
+| Awaiting GCC | 10 |
+| Awaiting GR | 7 |
+
+**Staleness Adjustments:**
+- 30+ days in stage: +7 days, -5% confidence
+- 60+ days in stage: +14 days, -10% confidence
+
+**Payment Terms:**
+- Aramco: 7 days after invoice
+- Commercial: 45 days after invoice
+
+**Confidence Levels:**
+- High (0.85): Late stages (Awaiting GR/GCC/MDD)
+- Medium (0.70): Normal stages
+- Low (0.50): Unknown stages or stuck deals
 
 ---
 
@@ -1072,22 +1095,24 @@ The LLM infrastructure follows a **strict separation of concerns**:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Business Logic Layer (Services)                            │
-│  - WriterService: Content generation                        │
-│  - CashflowPredictionService: Intelligent forecasting       │
-│  - Uses prompts from PromptRegistry                         │
+│  - WriterService: Content generation (uses LLM)             │
+│  - CashflowPredictionService: Deterministic only (no LLM)   │
+│  - Uses prompts from PromptRegistry (WriterService)         │
 │  - Applies business rules via DeterministicRules            │
 └─────────────────────────────────────────────────────────────┘
                             │
-                            ▼
+           ┌────────────────┴────────────────┐
+           ▼                                 ▼
+┌─────────────────────────────┐  ┌─────────────────────────────┐
+│  Prompt Management Layer    │  │  Deterministic Rules Layer  │
+│  - PromptRegistry           │  │  - DeterministicRules       │
+│  - Jinja2 templates         │  │  - Stage duration table     │
+│  (WriterService only)       │  │  (CashflowPrediction only)  │
+└─────────────────────────────┘  └─────────────────────────────┘
+           │
+           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Prompt Management Layer                                    │
-│  - PromptRegistry: Centralized templates with versioning    │
-│  - Jinja2 rendering with variable validation               │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Infrastructure Layer (LLMClient)                           │
+│  Infrastructure Layer (LLMClient) - WriterService only      │
 │  - HTTP transport with connection pooling                  │
 │  - Retry logic with exponential backoff                    │
 │  - Structured output enforcement (JSON → Pydantic)         │
@@ -1101,9 +1126,13 @@ The LLM infrastructure follows a **strict separation of concerns**:
 1. **LLMClient is infrastructure-only**: No business logic, prompts, or use-case-specific methods
 2. **PromptRegistry centralizes all prompts**: Version-controlled, Jinja2 templates
 3. **Services own business logic**: WriterService and CashflowPredictionService contain all use cases
-4. **Hybrid approach for predictions**: LLM + deterministic rules for reliability
-5. **Confidence scoring**: All LLM outputs include confidence (0.0-1.0) for downstream decision-making
+4. **Deterministic-only for cashflow**: LLM predictions disabled, pure rule-based approach for reliability and speed
+5. **Confidence scoring**: All outputs include confidence (0.0-1.0) for downstream decision-making
 6. **Graceful degradation**: Fallbacks on LLM failures with clear warnings
+
+> **Note**: CashflowPredictionService was originally designed for hybrid LLM + rules, but LLM code has been
+> commented out in favor of pure deterministic predictions. This provides faster response times, no API costs,
+> and consistent, predictable results.
 
 ### 16.3 Migration from Old Architecture
 
@@ -1149,7 +1178,7 @@ else:
     queue_for_review(result)
 ```
 
-**Pattern 2: Cashflow Prediction**
+**Pattern 2: Cashflow Prediction (Deterministic)**
 ```python
 from cmd_center.backend.services.cashflow_prediction_service import get_cashflow_prediction_service
 from cmd_center.backend.models import CashflowPredictionInput
@@ -1160,9 +1189,11 @@ result = await service.predict_cashflow(CashflowPredictionInput(
     horizon_days=90
 ))
 
+# Predictions use deterministic rules based on stage durations
 for pred in result.per_deal_predictions:
-    if pred.confidence >= 0.7:
-        update_forecast(pred.deal_id, pred.predicted_invoice_date)
+    print(f"Deal: {pred.deal_title}")
+    print(f"Stage: {pred.stage} → Invoice in {pred.predicted_invoice_date}")
+    print(f"Confidence: {pred.confidence} ({', '.join(pred.assumptions)})")
 ```
 
 ### 16.5 Observability
@@ -1300,7 +1331,7 @@ winner = registry.promote_winner("email_tone_test", replace_base=True)
 | Email Draft | ~500 | ~300 | ~$0.007 |
 | Deal Summary | ~400 | ~250 | ~$0.006 |
 | Compliance Check | ~300 | ~150 | ~$0.004 |
-| Cashflow (10 deals) | ~1500 | ~800 | ~$0.017 |
+| Cashflow Prediction | N/A | N/A | **$0.00** (deterministic) |
 
 **Optimization Strategies:**
 1. Use deterministic rules when possible (DeterministicRules)
