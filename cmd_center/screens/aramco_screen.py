@@ -14,6 +14,7 @@ from .overdue_summary_modal import OverdueSummaryModal
 from .stuck_summary_modal import StuckSummaryModal
 from .order_received_summary_modal import OrderReceivedSummaryModal
 from .followup_email_modal import FollowupEmailModal
+from .add_note_modal import AddNoteModal
 
 
 class AramcoPipelineScreen(Screen):
@@ -331,6 +332,21 @@ class AramcoPipelineScreen(Screen):
             new_row = min(cursor_row, table.row_count - 1)
             table.move_cursor(row=new_row, column=min(cursor_col, len(table.ordered_columns) - 1))
 
+    def _get_selected_deal_id(self) -> int | None:
+        """Get the deal ID from the currently selected table row."""
+        table = self.query_one("#aramco-table", DataTable)
+        cursor_row, cursor_col = table.cursor_coordinate
+        cell_key = table.coordinate_to_cell_key((cursor_row, cursor_col))
+        row_key_obj = cell_key.row_key if cell_key else None
+        row_key_value = row_key_obj.value if row_key_obj is not None else None
+
+        if row_key_value is None:
+            return None
+        try:
+            return int(row_key_value)
+        except ValueError:
+            return None
+
     def _render_cashflow_deals(self):
         """Render the cashflow critical deals table."""
         deals_table = self.query_one("#cashflow-deals-table", DataTable)
@@ -381,45 +397,22 @@ class AramcoPipelineScreen(Screen):
         elif event.button.id == "btn-reload":
             await self.load_mode_data()
         elif event.button.id == "check-notes-button":
-            # Show notes modal for selected deal
-            table = self.query_one("#aramco-table", DataTable)
-            cursor_row, cursor_col = table.cursor_coordinate
-            cell_key = table.coordinate_to_cell_key((cursor_row, cursor_col))
-            row_key = cell_key.row_key if cell_key else None
-            row_key_obj = cell_key.row_key if cell_key else None
-            row_key_value = row_key_obj.value if row_key_obj is not None else None
-            log(f"row_key_obj={row_key_obj!r} row_key_value={row_key_value!r} type={type(row_key_value)}")
-            if row_key is None:
+            deal_id = self._get_selected_deal_id()
+            if deal_id is None:
                 self.notify("Select a deal row (not a group header).", severity="warning")
-            else:
-                try:
-                    deal_id_int = int(row_key_value)
-                    self.selected_deal_id = str(deal_id_int)
-                    modal = NotesModalScreen(self.api_url, deal_id_int)
-                    self.app.push_screen(modal)
-                except ValueError:
-                    self.notify("Invalid deal ID.", severity="warning")
-        elif event.button.id == "generate-followup-button":
-            # Get selected deal ID from table cursor
-            table = self.query_one("#aramco-table", DataTable)
-            cursor_row, cursor_col = table.cursor_coordinate
-            cell_key = table.coordinate_to_cell_key((cursor_row, cursor_col))
-            row_key_obj = cell_key.row_key if cell_key else None
-            row_key_value = row_key_obj.value if row_key_obj is not None else None
+                return
 
-            if row_key_value is None:
+            self.selected_deal_id = str(deal_id)
+            modal = NotesModalScreen(self.api_url, deal_id)
+            self.app.push_screen(modal)
+        elif event.button.id == "generate-followup-button":
+            deal_id = self._get_selected_deal_id()
+            if deal_id is None:
                 self.notify("Select a deal row first (not a group header).", severity="warning")
                 return
 
-            try:
-                deal_id_int = int(row_key_value)
-            except ValueError:
-                self.notify("Invalid deal ID.", severity="warning")
-                return
-
-            # Generate email via API
             self.notify("Generating email...", severity="info")
-            await self._show_followup_modal(deal_id_int)
+            await self._show_followup_modal(deal_id)
         elif event.button.id == "view-summary-button":
             # Route to correct modal based on current mode
             if self.current_mode == "overdue":
@@ -437,6 +430,14 @@ class AramcoPipelineScreen(Screen):
 
             self.notify("Loading summary...", severity="info")
             self.app.push_screen(modal)
+        elif event.button.id == "add-note-button":
+            deal_id = self._get_selected_deal_id()
+            if deal_id is None:
+                self.notify("Select a deal row first (not a group header).", severity="warning")
+                return
+
+            modal = AddNoteModal(api_url=self.api_url, deal_id=deal_id)
+            self.app.push_screen(modal, lambda result: self.notify("Note added!", severity="information") if result else None)
 
     async def _show_followup_modal(self, deal_id: int) -> None:
         """Fetch email template and show the modal."""

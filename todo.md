@@ -31,10 +31,8 @@
 - [x] Create the database and sync function for the emails.
 - [x] the service layer to handle the send report button. 
 
-## Overdue Summary - Future Enhancements
 
 
-- [ ] Implement send report for overdue summary so the employee can change SSD.
 
 ## Stuck Summary - Future Enhancements
 
