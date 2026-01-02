@@ -77,12 +77,12 @@ class TaskCreateModal(ModalScreen):
     ):
         super().__init__()
         self.api_url = api_url
-        self.task = task  # None for create, dict for edit
+        self._task_data = task  # None for create, dict for edit
         self.on_save = on_save
         self._employees = []
 
     def compose(self) -> ComposeResult:
-        title = "Edit Task" if self.task else "New Task"
+        title = "Edit Task" if self._task_data else "New Task"
 
         with Vertical(id="modal-container"):
             yield Static(title, id="modal-title")
@@ -90,7 +90,7 @@ class TaskCreateModal(ModalScreen):
             with Horizontal(classes="form-row"):
                 yield Static("Title:", classes="form-label")
                 yield Input(
-                    value=self.task.get("title", "") if self.task else "",
+                    value=self._task_data.get("title", "") if self._task_data else "",
                     placeholder="Task title",
                     id="input-title",
                     classes="form-input",
@@ -99,7 +99,7 @@ class TaskCreateModal(ModalScreen):
             with Horizontal(classes="form-row"):
                 yield Static("Description:", classes="form-label")
                 yield Input(
-                    value=self.task.get("description", "") if self.task else "",
+                    value=self._task_data.get("description", "") if self._task_data else "",
                     placeholder="Optional description",
                     id="input-description",
                     classes="form-input",
@@ -113,7 +113,7 @@ class TaskCreateModal(ModalScreen):
                         ("Medium", "medium"),
                         ("Low", "low"),
                     ],
-                    value=self.task.get("priority", "medium") if self.task else "medium",
+                    value=self._task_data.get("priority", "medium") if self._task_data else "medium",
                     id="select-priority",
                     allow_blank=False,
                 )
@@ -130,7 +130,7 @@ class TaskCreateModal(ModalScreen):
             with Horizontal(classes="form-row"):
                 yield Static("Due:", classes="form-label")
                 yield Input(
-                    value=self._format_date(self.task.get("due_at")) if self.task else "",
+                    value=self._format_date(self._task_data.get("due_at")) if self._task_data else "",
                     placeholder="YYYY-MM-DD or +7d",
                     id="input-due",
                     classes="form-input",
@@ -140,7 +140,7 @@ class TaskCreateModal(ModalScreen):
                 yield Static("Critical:", classes="form-label")
                 yield Checkbox(
                     "Mark as critical",
-                    value=self.task.get("is_critical", False) if self.task else False,
+                    value=self._task_data.get("is_critical", False) if self._task_data else False,
                     id="check-critical",
                 )
 
@@ -205,8 +205,8 @@ class TaskCreateModal(ModalScreen):
                 select._options = options
 
                 # Set current value if editing
-                if self.task and self.task.get("assignee_employee_id"):
-                    select.value = str(self.task["assignee_employee_id"])
+                if self._task_data and self._task_data.get("assignee_employee_id"):
+                    select.value = str(self._task_data["assignee_employee_id"])
         except Exception:
             pass
 
@@ -255,10 +255,10 @@ class TaskCreateModal(ModalScreen):
 
         try:
             async with httpx.AsyncClient() as client:
-                if self.task:
+                if self._task_data:
                     # Update existing
                     response = await client.put(
-                        f"{self.api_url}/tasks/{self.task['id']}",
+                        f"{self.api_url}/tasks/{self._task_data['id']}",
                         json=payload,
                     )
                 else:
@@ -291,7 +291,7 @@ class NoteCreateModal(ModalScreen):
     #modal-container {
         width: 70;
         height: auto;
-        max-height: 35;
+        max-height: 45;
         border: thick $primary;
         background: $surface;
         padding: 1 2;
@@ -323,7 +323,7 @@ class NoteCreateModal(ModalScreen):
     }
 
     #button-row {
-        margin-top: 1;
+        margin-top: 2;
         height: 3;
     }
 

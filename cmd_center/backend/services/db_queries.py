@@ -1,6 +1,6 @@
 """Read helpers for the SQLite cache to support fast TUI loads."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from sqlmodel import Session, select, func

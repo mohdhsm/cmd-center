@@ -14,6 +14,7 @@ from .screens import (
     TrackerScreen,
     TeamScreen,
     LoopMonitorScreen,
+    CEODashboardScreen,
 )
 
 
@@ -35,7 +36,7 @@ class CommandCenterApp(App):
     
     BINDINGS = [
         ("q", "quit", "Quit"),
-        ("d", "switch_screen('dashboard')", "Dashboard"),
+        ("d", "switch_screen('ceo_dashboard')", "Dashboard"),
         ("a", "switch_screen('aramco')", "Aramco"),
         ("c", "switch_screen('commercial')", "Commercial"),
         ("o", "switch_screen('owner_kpi')", "Owner KPIs"),
@@ -44,6 +45,7 @@ class CommandCenterApp(App):
         ("t", "switch_screen('tracker')", "Tracker"),
         ("p", "switch_screen('team')", "Team"),
         ("l", "switch_screen('loops')", "Loops"),
+        ("w", "switch_screen('dashboard')", "War Room"),  # Old dashboard as "War Room"
     ]
     
     def __init__(self, api_url: str = "http://127.0.0.1:8000"):
@@ -53,7 +55,8 @@ class CommandCenterApp(App):
     def on_mount(self) -> None:
         """Set up the application on mount."""
         # Install all screens
-        self.install_screen(DashboardScreen(self.api_url), name="dashboard")
+        self.install_screen(CEODashboardScreen(self.api_url), name="ceo_dashboard")
+        self.install_screen(DashboardScreen(self.api_url), name="dashboard")  # Old dashboard as "War Room"
         self.install_screen(AramcoPipelineScreen(self.api_url), name="aramco")
         self.install_screen(CommercialPipelineScreen(self.api_url), name="commercial")
         self.install_screen(OwnerKPIScreen(self.api_url), name="owner_kpi")
@@ -63,8 +66,8 @@ class CommandCenterApp(App):
         self.install_screen(TeamScreen(self.api_url), name="team")
         self.install_screen(LoopMonitorScreen(self.api_url), name="loops")
 
-        # Start with dashboard
-        self.push_screen("dashboard")
+        # Start with CEO Dashboard (default on launch)
+        self.push_screen("ceo_dashboard")
     
     def action_switch_screen(self, screen_name: str) -> None:
         """Switch to a different screen."""

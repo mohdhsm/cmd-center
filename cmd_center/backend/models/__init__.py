@@ -82,6 +82,28 @@ from .employee_models import (
     InterventionListResponse,
     InterventionFilters,
 )
+from .ceo_dashboard_models import (
+    CashHealth,
+    UrgentDeal,
+    PipelineStage,
+    PipelineVelocity,
+    StrategicPriority,
+    SalesScorecard,
+    DepartmentScorecard,
+    CEODashboardMetrics,
+)
+from .msgraph_email_models import (
+    EmailRecipientInput,
+    EmailAttachmentInput,
+    EmailComposeRequest,
+    EmailSearchFilters,
+    EmailAddress,
+    EmailAttachment,
+    EmailMessage,
+    MailFolder,
+    EmailListResponse,
+    FolderListResponse,
+)
 
 __all__ = [
     "DealBase",
@@ -158,4 +180,24 @@ __all__ = [
     "InterventionResponse",
     "InterventionListResponse",
     "InterventionFilters",
+    # CEO Dashboard Models
+    "CashHealth",
+    "UrgentDeal",
+    "PipelineStage",
+    "PipelineVelocity",
+    "StrategicPriority",
+    "SalesScorecard",
+    "DepartmentScorecard",
+    "CEODashboardMetrics",
+    # MSGraph Email Models
+    "EmailRecipientInput",
+    "EmailAttachmentInput",
+    "EmailComposeRequest",
+    "EmailSearchFilters",
+    "EmailAddress",
+    "EmailAttachment",
+    "EmailMessage",
+    "MailFolder",
+    "EmailListResponse",
+    "FolderListResponse",
 ]

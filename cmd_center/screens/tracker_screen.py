@@ -195,7 +195,8 @@ class TrackerScreen(Screen):
                             ("Achievement", "achievement"),
                             ("Issue", "issue"),
                             ("Feedback", "feedback"),
-                            ("Performance", "performance_review"),
+                            ("Milestone", "milestone"),
+                            ("Other", "other"),
                         ],
                         id="log-category-select",
                         value="all",
@@ -245,7 +246,8 @@ class TrackerScreen(Screen):
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{self.api_url}/employees")
                 if response.status_code == 200:
-                    employees = response.json()
+                    data = response.json()
+                    employees = data.get("items", [])
                     self.employees = {e["id"]: e["full_name"] for e in employees}
                     self._update_employee_selects()
         except Exception:
@@ -336,7 +338,8 @@ class TrackerScreen(Screen):
 
         response = await client.get(f"{self.api_url}/documents", params=params)
         if response.status_code == 200:
-            self.items = response.json()
+            data = response.json()
+            self.items = data.get("items", [])
             self._render_documents()
 
     def _render_documents(self) -> None:
@@ -346,7 +349,7 @@ class TrackerScreen(Screen):
 
         table.add_columns("ID", "Title", "Type", "Expiry", "Status", "Responsible")
 
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(timezone.utc)
         expiring_soon = 0
         critical = 0
 
@@ -355,8 +358,13 @@ class TrackerScreen(Screen):
             expiry_class = ""
 
             if doc.get("expiry_date"):
-                expiry = datetime.fromisoformat(doc["expiry_date"].replace("Z", ""))
-                days_until = (expiry - now).days
+                try:
+                    expiry = datetime.fromisoformat(doc["expiry_date"].replace("Z", "+00:00"))
+                    if expiry.tzinfo is None:
+                        expiry = expiry.replace(tzinfo=timezone.utc)
+                    days_until = (expiry - now).days
+                except (ValueError, TypeError):
+                    continue
 
                 if days_until < 0:
                     expiry_str = f"-{abs(days_until)}d EXPIRED"
@@ -402,7 +410,8 @@ class TrackerScreen(Screen):
 
         response = await client.get(f"{self.api_url}/bonuses", params=params)
         if response.status_code == 200:
-            self.items = response.json()
+            data = response.json()
+            self.items = data.get("items", [])
             self._render_bonuses()
 
     def _render_bonuses(self) -> None:
@@ -412,7 +421,7 @@ class TrackerScreen(Screen):
 
         table.add_columns("ID", "Title", "Employee", "Amount", "Due", "Status", "Paid")
 
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(timezone.utc)
         total_pending = 0
         total_amount = 0
 
@@ -425,15 +434,20 @@ class TrackerScreen(Screen):
 
             due_str = "—"
             if bonus.get("due_date"):
-                due = datetime.fromisoformat(bonus["due_date"].replace("Z", ""))
-                days_until = (due - now).days
-                if days_until < 0:
-                    due_str = f"-{abs(days_until)}d"
-                else:
-                    due_str = f"{days_until}d"
+                try:
+                    due = datetime.fromisoformat(bonus["due_date"].replace("Z", "+00:00"))
+                    if due.tzinfo is None:
+                        due = due.replace(tzinfo=timezone.utc)
+                    days_until = (due - now).days
+                    if days_until < 0:
+                        due_str = f"-{abs(days_until)}d"
+                    else:
+                        due_str = f"{days_until}d"
+                except (ValueError, TypeError):
+                    pass
 
-            paid_amount = bonus.get("paid_amount", 0)
-            paid_str = f"{paid_amount:,.0f}/{amount:,.0f}"
+            total_paid = bonus.get("total_paid", 0)
+            paid_str = f"{total_paid:,.0f}/{amount:,.0f}"
 
             status = bonus.get("status", "pending")
 
@@ -467,7 +481,8 @@ class TrackerScreen(Screen):
 
         response = await client.get(f"{self.api_url}/employee-logs", params=params)
         if response.status_code == 200:
-            self.items = response.json()
+            data = response.json()
+            self.items = data.get("items", [])
             self._render_logs()
 
     def _render_logs(self) -> None:
@@ -475,28 +490,29 @@ class TrackerScreen(Screen):
         table = self.query_one("#data-table", DataTable)
         table.clear(columns=True)
 
-        table.add_columns("ID", "Date", "Employee", "Category", "Severity", "Summary")
+        table.add_columns("ID", "Date", "Employee", "Category", "Severity", "Title")
 
         category_icons = {
             "achievement": "trophy",
             "issue": "warning",
             "feedback": "speech",
-            "performance_review": "chart",
+            "milestone": "flag",
+            "other": "note",
         }
 
         for log in self.items:
             employee = self.employees.get(log.get("employee_id"), "—")
 
             date_str = "—"
-            if log.get("logged_at"):
-                logged = datetime.fromisoformat(log["logged_at"].replace("Z", ""))
-                date_str = logged.strftime("%Y-%m-%d")
+            if log.get("occurred_at"):
+                occurred = datetime.fromisoformat(log["occurred_at"].replace("Z", ""))
+                date_str = occurred.strftime("%Y-%m-%d")
 
             category = log.get("category", "—")
             icon = category_icons.get(category, "")
             category_display = f"{icon} {category}" if icon else category
 
-            summary = log.get("summary", "")[:40]
+            title = log.get("title", "")[:40]
 
             table.add_row(
                 str(log["id"]),
@@ -504,7 +520,7 @@ class TrackerScreen(Screen):
                 employee[:15],
                 category_display,
                 log.get("severity", "—"),
-                summary,
+                title,
                 key=str(log["id"]),
             )
 
@@ -519,7 +535,8 @@ class TrackerScreen(Screen):
 
         response = await client.get(f"{self.api_url}/skills", params=params)
         if response.status_code == 200:
-            self.items = response.json()
+            data = response.json()
+            self.items = data.get("items", [])
             self._render_skills()
 
     def _render_skills(self) -> None:
@@ -613,6 +630,11 @@ class TrackerScreen(Screen):
 
     def action_edit_item(self) -> None:
         """Edit selected item."""
+        # Logs are immutable - cannot edit
+        if self.current_mode == "logs":
+            self.query_one("#stats-bar", Static).update("Logs cannot be edited")
+            return
+
         table = self.query_one("#data-table", DataTable)
         if table.cursor_row is None or not self.items:
             return
@@ -634,11 +656,6 @@ class TrackerScreen(Screen):
             elif self.current_mode == "bonuses":
                 self.app.push_screen(
                     BonusCreateModal(self.api_url, self.employees, item),
-                    self._on_item_created,
-                )
-            elif self.current_mode == "logs":
-                self.app.push_screen(
-                    LogCreateModal(self.api_url, self.employees, item),
                     self._on_item_created,
                 )
             elif self.current_mode == "skills":
@@ -830,7 +847,7 @@ class DocumentCreateModal(ModalScreen):
         try:
             async with httpx.AsyncClient() as client:
                 if self.is_edit and self.document:
-                    response = await client.patch(
+                    response = await client.put(
                         f"{self.api_url}/documents/{self.document['id']}",
                         json=data,
                     )
@@ -879,7 +896,7 @@ class BonusCreateModal(ModalScreen):
     #modal-container {
         width: 60;
         height: auto;
-        max-height: 80%;
+        max-height: 90%;
         background: $surface;
         border: thick $primary;
         padding: 1 2;
@@ -934,11 +951,13 @@ class BonusCreateModal(ModalScreen):
 
             yield Label("Employee:", classes="field-label")
             emp_options = [(name, str(id)) for id, name in self.employees.items()]
+            if not emp_options:
+                emp_options = [("Loading...", "0")]
             current_emp = str(self.bonus.get("employee_id", "")) if self.bonus else ""
             yield Select(
                 emp_options,
                 id="employee-select",
-                value=current_emp if current_emp else (emp_options[0][1] if emp_options else ""),
+                value=current_emp if current_emp in [opt[1] for opt in emp_options] else emp_options[0][1],
             )
 
             yield Label("Amount:", classes="field-label")
@@ -955,6 +974,27 @@ class BonusCreateModal(ModalScreen):
                 value=self.bonus.get("currency", "SAR") if self.bonus else "SAR",
             )
 
+            yield Label("Bonus Type:", classes="field-label")
+            yield Select(
+                [
+                    ("Performance", "performance"),
+                    ("Project", "project"),
+                    ("Annual", "annual"),
+                    ("Other", "other"),
+                ],
+                id="type-select",
+                value=self.bonus.get("bonus_type", "performance") if self.bonus else "performance",
+            )
+
+            yield Label("Promised Date (YYYY-MM-DD):", classes="field-label")
+            promised_val = ""
+            if self.bonus and self.bonus.get("promised_date"):
+                promised_val = self.bonus["promised_date"][:10]
+            else:
+                # Default to today for new bonuses
+                promised_val = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            yield Input(value=promised_val, id="promised-input", placeholder="2025-01-01")
+
             yield Label("Due Date (YYYY-MM-DD or +30d):", classes="field-label")
             due_val = ""
             if self.bonus and self.bonus.get("due_date"):
@@ -967,6 +1007,27 @@ class BonusCreateModal(ModalScreen):
 
     def on_mount(self) -> None:
         self.query_one("#title-input", Input).focus()
+        if not self.employees or (len(self.employees) == 1 and 0 in self.employees):
+            self.run_worker(self._load_employees())
+
+    async def _load_employees(self) -> None:
+        """Load employees from API if not provided."""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{self.api_url}/employees?is_active=true")
+                if response.status_code == 200:
+                    data = response.json()
+                    employees_list = data.get("items", [])
+                    self.employees = {e["id"]: e["full_name"] for e in employees_list}
+
+                    # Update the select widget
+                    select = self.query_one("#employee-select", Select)
+                    options = [(name, str(id)) for id, name in self.employees.items()]
+                    if options:
+                        select.set_options(options)
+                        select.value = options[0][1]
+        except Exception:
+            pass
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-cancel":
@@ -988,12 +1049,19 @@ class BonusCreateModal(ModalScreen):
         employee_id = int(self.query_one("#employee-select", Select).value)
         amount_str = self.query_one("#amount-input", Input).value.strip()
         currency = str(self.query_one("#currency-select", Select).value)
+        bonus_type = str(self.query_one("#type-select", Select).value)
+        promised_str = self.query_one("#promised-input", Input).value.strip()
         due_str = self.query_one("#due-input", Input).value.strip()
 
         try:
             amount = float(amount_str)
         except ValueError:
             return
+
+        # Parse promised_date (required for create)
+        promised_date = self._parse_date(promised_str) if promised_str else None
+        if not self.is_edit and not promised_date:
+            return  # Required for create
 
         due_date = None
         if due_str:
@@ -1004,14 +1072,17 @@ class BonusCreateModal(ModalScreen):
             "employee_id": employee_id,
             "amount": amount,
             "currency": currency,
+            "bonus_type": bonus_type,
         }
+        if promised_date:
+            data["promised_date"] = promised_date
         if due_date:
             data["due_date"] = due_date
 
         try:
             async with httpx.AsyncClient() as client:
                 if self.is_edit and self.bonus:
-                    response = await client.patch(
+                    response = await client.put(
                         f"{self.api_url}/bonuses/{self.bonus['id']}",
                         json=data,
                     )
@@ -1100,7 +1171,7 @@ class BonusPaymentModal(ModalScreen):
 
     def compose(self) -> ComposeResult:
         amount = self.bonus.get("amount", 0)
-        paid = self.bonus.get("paid_amount", 0)
+        paid = self.bonus.get("total_paid", 0)
         remaining = amount - paid
         currency = self.bonus.get("currency", "SAR")
 
@@ -1214,7 +1285,7 @@ class LogCreateModal(ModalScreen):
         super().__init__()
         self.api_url = api_url
         self.employees = employees
-        self.log = log
+        self._log_data = log
         self.is_edit = log is not None
 
     def compose(self) -> ComposeResult:
@@ -1226,11 +1297,13 @@ class LogCreateModal(ModalScreen):
 
             yield Label("Employee:", classes="field-label")
             emp_options = [(name, str(id)) for id, name in self.employees.items()]
-            current_emp = str(self.log.get("employee_id", "")) if self.log else ""
+            if not emp_options:
+                emp_options = [("Loading...", "0")]
+            current_emp = str(self._log_data.get("employee_id", "")) if self._log_data else ""
             yield Select(
                 emp_options,
                 id="employee-select",
-                value=current_emp if current_emp else (emp_options[0][1] if emp_options else ""),
+                value=current_emp if current_emp in [opt[1] for opt in emp_options] else emp_options[0][1],
             )
 
             yield Label("Category:", classes="field-label")
@@ -1239,10 +1312,11 @@ class LogCreateModal(ModalScreen):
                     ("Achievement", "achievement"),
                     ("Issue", "issue"),
                     ("Feedback", "feedback"),
-                    ("Performance Review", "performance_review"),
+                    ("Milestone", "milestone"),
+                    ("Other", "other"),
                 ],
                 id="category-select",
-                value=self.log.get("category", "feedback") if self.log else "feedback",
+                value=self._log_data.get("category", "feedback") if self._log_data else "feedback",
             )
 
             yield Label("Severity:", classes="field-label")
@@ -1251,23 +1325,22 @@ class LogCreateModal(ModalScreen):
                     ("Low", "low"),
                     ("Medium", "medium"),
                     ("High", "high"),
-                    ("Critical", "critical"),
                 ],
                 id="severity-select",
-                value=self.log.get("severity", "medium") if self.log else "medium",
+                value=self._log_data.get("severity", "low") if self._log_data else "low",
             )
 
-            yield Label("Summary:", classes="field-label")
+            yield Label("Title:", classes="field-label")
             yield Input(
-                value=self.log.get("summary", "") if self.log else "",
-                id="summary-input",
-                placeholder="Brief summary",
+                value=self._log_data.get("title", "") if self._log_data else "",
+                id="title-input",
+                placeholder="Brief title",
             )
 
-            yield Label("Details:", classes="field-label")
+            yield Label("Content:", classes="field-label")
             yield TextArea(
-                self.log.get("details", "") if self.log else "",
-                id="details-input",
+                self._log_data.get("content", "") if self._log_data else "",
+                id="content-input",
             )
 
             with Horizontal(id="button-row"):
@@ -1275,7 +1348,28 @@ class LogCreateModal(ModalScreen):
                 yield Button("Save", variant="primary", id="btn-save")
 
     def on_mount(self) -> None:
-        self.query_one("#summary-input", Input).focus()
+        self.query_one("#title-input", Input).focus()
+        if not self.employees or (len(self.employees) == 1 and 0 in self.employees):
+            self.run_worker(self._load_employees())
+
+    async def _load_employees(self) -> None:
+        """Load employees from API if not provided."""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{self.api_url}/employees?is_active=true")
+                if response.status_code == 200:
+                    data = response.json()
+                    employees_list = data.get("items", [])
+                    self.employees = {e["id"]: e["full_name"] for e in employees_list}
+
+                    # Update the select widget
+                    select = self.query_one("#employee-select", Select)
+                    options = [(name, str(id)) for id, name in self.employees.items()]
+                    if options:
+                        select.set_options(options)
+                        select.value = options[0][1]
+        except Exception:
+            pass
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-cancel":
@@ -1290,36 +1384,31 @@ class LogCreateModal(ModalScreen):
         self.run_worker(self._save_log())
 
     async def _save_log(self) -> None:
-        summary = self.query_one("#summary-input", Input).value.strip()
-        if not summary:
+        title = self.query_one("#title-input", Input).value.strip()
+        content = self.query_one("#content-input", TextArea).text.strip()
+
+        if not title or not content:
             return
 
         employee_id = int(self.query_one("#employee-select", Select).value)
         category = str(self.query_one("#category-select", Select).value)
         severity = str(self.query_one("#severity-select", Select).value)
-        details = self.query_one("#details-input", TextArea).text.strip()
 
         data = {
             "employee_id": employee_id,
             "category": category,
+            "title": title,
+            "content": content,
             "severity": severity,
-            "summary": summary,
         }
-        if details:
-            data["details"] = details
 
         try:
             async with httpx.AsyncClient() as client:
-                if self.is_edit and self.log:
-                    response = await client.patch(
-                        f"{self.api_url}/employee-logs/{self.log['id']}",
-                        json=data,
-                    )
-                else:
-                    response = await client.post(
-                        f"{self.api_url}/employee-logs",
-                        json=data,
-                    )
+                # Employee logs are immutable - always create new
+                response = await client.post(
+                    f"{self.api_url}/employee-logs",
+                    json=data,
+                )
 
                 if response.status_code in (200, 201):
                     self.dismiss(True)
@@ -1447,7 +1536,7 @@ class SkillCreateModal(ModalScreen):
         try:
             async with httpx.AsyncClient() as client:
                 if self.is_edit and self.skill:
-                    response = await client.patch(
+                    response = await client.put(
                         f"{self.api_url}/skills/{self.skill['id']}",
                         json=data,
                     )

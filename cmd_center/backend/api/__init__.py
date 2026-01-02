@@ -5,6 +5,7 @@ from . import health, dashboard, aramco, commercial, owners, deals, emails, sync
 from . import employees, interventions, reminders, tasks, notes
 from . import documents, bonuses, employee_logs, skills
 from . import loops
+from . import ceo_dashboard
 
 # Create main API router
 api_router = APIRouter()
@@ -34,5 +35,8 @@ api_router.include_router(skills.router)
 
 # Loop Engine routers
 api_router.include_router(loops.router)
+
+# CEO Dashboard router
+api_router.include_router(ceo_dashboard.router)
 
 __all__ = ["api_router"]

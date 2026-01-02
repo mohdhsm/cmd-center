@@ -7,6 +7,7 @@ from .owner_kpi_service import OwnerKPIService, get_owner_kpi_service
 from .email_service import EmailService, get_email_service
 from .dashboard_service import DashboardService, get_dashboard_service
 from .aramco_summary_service import AramcoSummaryService, get_aramco_summary_service
+from .ceo_dashboard_service import CEODashboardService, get_ceo_dashboard_service
 
 # CEO Dashboard services
 from .employee_service import EmployeeService, get_employee_service
@@ -40,6 +41,20 @@ from .loops import (
     ReminderProcessingLoop,
 )
 
+# Microsoft Graph Email service
+from .msgraph_email_service import MSGraphEmailService, get_msgraph_email_service
+
+# Email Sync
+from .email_sync import (
+    SYNC_MAILBOXES,
+    sync_emails_for_mailbox,
+    sync_folders_for_mailbox,
+    sync_all_mailboxes,
+    get_last_email_sync_time,
+    update_email_sync_metadata,
+    is_sync_in_progress,
+)
+
 __all__ = [
     # Existing services
     "DealHealthService",
@@ -56,6 +71,8 @@ __all__ = [
     "get_dashboard_service",
     "AramcoSummaryService",
     "get_aramco_summary_service",
+    "CEODashboardService",
+    "get_ceo_dashboard_service",
     # CEO Dashboard services
     "EmployeeService",
     "get_employee_service",
@@ -87,4 +104,15 @@ __all__ = [
     "BonusDueLoop",
     "TaskOverdueLoop",
     "ReminderProcessingLoop",
+    # Microsoft Graph Email service
+    "MSGraphEmailService",
+    "get_msgraph_email_service",
+    # Email Sync
+    "SYNC_MAILBOXES",
+    "sync_emails_for_mailbox",
+    "sync_folders_for_mailbox",
+    "sync_all_mailboxes",
+    "get_last_email_sync_time",
+    "update_email_sync_metadata",
+    "is_sync_in_progress",
 ]

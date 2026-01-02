@@ -17,7 +17,7 @@ class NotesModalScreen(ModalScreen):
 
     #notes-modal {
         width: 80;
-        height: 30;
+        height: 40;
         border: thick $primary;
         background: $surface;
     }

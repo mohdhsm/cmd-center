@@ -156,7 +156,8 @@ class TeamScreen(Screen):
                     f"{self.api_url}/employees", params=params
                 )
                 if response.status_code == 200:
-                    self.employees = response.json()
+                    data = response.json()
+                    self.employees = data.get("items", [])
                     await self._enrich_employees(client)
                     self._render_table()
                     self._update_stats()
@@ -442,7 +443,8 @@ class EmployeeCreateModal(ModalScreen):
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{self.api_url}/employees")
                 if response.status_code == 200:
-                    employees = response.json()
+                    data = response.json()
+                    employees = data.get("items", [])
                     options = [("None", "none")] + [
                         (e["full_name"], str(e["id"]))
                         for e in employees

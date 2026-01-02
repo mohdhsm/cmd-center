@@ -288,15 +288,21 @@ class ManagementScreen(Screen):
                     # Format due date
                     due_str = "—"
                     if task.get("due_at"):
-                        due_dt = datetime.fromisoformat(task["due_at"].replace("Z", "+00:00"))
-                        now = datetime.now(timezone.utc)
-                        days = (due_dt - now).days
-                        if days < 0:
-                            due_str = f"{days}d"
-                        elif days == 0:
-                            due_str = "Today"
-                        else:
-                            due_str = f"{days}d"
+                        try:
+                            due_dt = datetime.fromisoformat(task["due_at"].replace("Z", "+00:00"))
+                            # Ensure timezone-aware for comparison
+                            if due_dt.tzinfo is None:
+                                due_dt = due_dt.replace(tzinfo=timezone.utc)
+                            now = datetime.now(timezone.utc)
+                            days = (due_dt - now).days
+                            if days < 0:
+                                due_str = f"{days}d"
+                            elif days == 0:
+                                due_str = "Today"
+                            else:
+                                due_str = f"{days}d"
+                        except (ValueError, TypeError):
+                            due_str = "—"
 
                     # Format status with icon
                     status = task.get("status", "open")
@@ -364,8 +370,11 @@ class ManagementScreen(Screen):
                     # Format review date
                     review = "—"
                     if note.get("review_at"):
-                        review_dt = datetime.fromisoformat(note["review_at"].replace("Z", "+00:00"))
-                        review = review_dt.strftime("%Y-%m-%d")
+                        try:
+                            review_dt = datetime.fromisoformat(note["review_at"].replace("Z", "+00:00"))
+                            review = review_dt.strftime("%Y-%m-%d")
+                        except (ValueError, TypeError):
+                            pass
 
                     # Pinned indicator
                     pinned = "📌" if note.get("pinned") else ""

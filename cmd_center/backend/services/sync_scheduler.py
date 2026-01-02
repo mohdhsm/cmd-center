@@ -16,6 +16,7 @@ from .pipedrive_sync import (
     get_last_sync_time,
     update_sync_metadata,
 )
+from .email_sync import sync_all_mailboxes
 from fastapi import FastAPI
 
 logger = logging.getLogger(__name__)
@@ -24,11 +25,13 @@ logger = logging.getLogger(__name__)
 deals_lock = asyncio.Lock()
 notes_lock = asyncio.Lock()
 stage_history_lock = asyncio.Lock()
+email_lock = asyncio.Lock()
 
 # Background tasks
 deals_task: Optional[asyncio.Task] = None
 notes_task: Optional[asyncio.Task] = None
 stage_history_task: Optional[asyncio.Task] = None
+email_task: Optional[asyncio.Task] = None
 
 
 async def bootstrap_sync():
@@ -139,6 +142,25 @@ async def run_stage_history_sync():
             logger.error(f"Stage history sync failed after {duration:.2f}s: {e}")
 
 
+async def run_email_sync():
+    """Run email sync for all mailboxes."""
+    async with email_lock:
+        logger.info("Starting email sync...")
+        start_time = asyncio.get_event_loop().time()
+        try:
+            result = await sync_all_mailboxes(ttl_minutes=15)
+            duration = asyncio.get_event_loop().time() - start_time
+            logger.info(
+                f"Email sync completed in {duration:.2f}s: "
+                f"{result['synced']} synced, {result['skipped']} skipped, {result['failed']} failed"
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            duration = asyncio.get_event_loop().time() - start_time
+            logger.error(f"Email sync failed after {duration:.2f}s: {e}")
+
+
 async def deals_loop():
     """Periodic deals sync loop (every 60 minutes)."""
     while True:
@@ -161,9 +183,16 @@ async def stage_history_loop():
         await run_stage_history_sync()
 
 
+async def email_loop():
+    """Periodic email sync loop (every 15 minutes)."""
+    while True:
+        await asyncio.sleep(15 * 60)  # 15 minutes
+        await run_email_sync()
+
+
 async def start_scheduler():
     """Start the background scheduler tasks."""
-    global deals_task, notes_task, stage_history_task
+    global deals_task, notes_task, stage_history_task, email_task
 
     if deals_task is None or deals_task.done():
         deals_task = asyncio.create_task(deals_loop())
@@ -177,10 +206,14 @@ async def start_scheduler():
         stage_history_task = asyncio.create_task(stage_history_loop())
         logger.info("Started stage history sync loop")
 
+    if email_task is None or email_task.done():
+        email_task = asyncio.create_task(email_loop())
+        logger.info("Started email sync loop")
+
 
 async def stop_scheduler():
     """Stop the background scheduler tasks."""
-    global deals_task, notes_task, stage_history_task
+    global deals_task, notes_task, stage_history_task, email_task
 
     if deals_task and not deals_task.done():
         deals_task.cancel()
@@ -206,6 +239,14 @@ async def stop_scheduler():
             pass
         logger.info("Stopped stage history sync loop")
 
+    if email_task and not email_task.done():
+        email_task.cancel()
+        try:
+            await email_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("Stopped email sync loop")
+
 
 @asynccontextmanager
 async def lifespan_manager(app: FastAPI):
@@ -225,6 +266,7 @@ async def lifespan_manager(app: FastAPI):
     await run_deals_sync()
     await run_notes_sync()
     await run_stage_history_sync()
+    await run_email_sync()
 
     # Start periodic loops
     await start_scheduler()

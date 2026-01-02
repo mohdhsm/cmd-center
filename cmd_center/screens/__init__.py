@@ -10,6 +10,7 @@ from .management_screen import ManagementScreen
 from .tracker_screen import TrackerScreen
 from .team_screen import TeamScreen
 from .loop_monitor_screen import LoopMonitorScreen
+from .ceo_dashboard_screen import CEODashboardScreen
 
 __all__ = [
     "DashboardScreen",
@@ -22,4 +23,5 @@ __all__ = [
     "TrackerScreen",
     "TeamScreen",
     "LoopMonitorScreen",
+    "CEODashboardScreen",
 ]

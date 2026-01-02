@@ -635,6 +635,113 @@ class LoopFinding(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+# ============================================================================
+# Email Cache Tables (Microsoft Graph)
+# ============================================================================
+
+class CachedEmail(SQLModel, table=True):
+    """Cached email from Microsoft Graph for fast local reads."""
+    __tablename__ = "cached_email"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Graph identification
+    graph_id: str = Field(index=True)  # MS Graph message ID
+    mailbox: str = Field(index=True)  # Which mailbox this belongs to
+
+    # Folder
+    folder_id: Optional[str] = Field(default=None, index=True)
+
+    # Content
+    subject: Optional[str] = Field(default=None, index=True)
+    body_preview: str = ""
+    body_content: Optional[str] = None
+    body_type: Optional[str] = None  # "text" or "html"
+
+    # Sender
+    sender_address: Optional[str] = Field(default=None, index=True)
+    sender_name: Optional[str] = None
+
+    # Recipients (JSON arrays)
+    to_recipients_json: Optional[str] = None
+    cc_recipients_json: Optional[str] = None
+
+    # Timestamps
+    received_at: Optional[datetime] = Field(default=None, index=True)
+    sent_at: Optional[datetime] = None
+
+    # Flags
+    is_read: bool = Field(default=False, index=True)
+    has_attachments: bool = Field(default=False, index=True)
+    importance: str = Field(default="normal")
+    is_draft: bool = Field(default=False)
+
+    # Graph metadata
+    conversation_id: Optional[str] = Field(default=None, index=True)
+    web_link: Optional[str] = None
+
+    # Sync tracking
+    synced_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    graph_modified_at: Optional[datetime] = None  # From Graph API
+
+    # Composite unique constraint via __table_args__
+    __table_args__ = (
+        Index("ix_cached_email_graph_mailbox", "graph_id", "mailbox", unique=True),
+    )
+
+
+class CachedEmailAttachment(SQLModel, table=True):
+    """Cached email attachment metadata (not content)."""
+    __tablename__ = "cached_email_attachment"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Graph identification
+    graph_id: str = Field(index=True)  # MS Graph attachment ID
+    email_graph_id: str = Field(index=True)  # Parent email's Graph ID
+    mailbox: str = Field(index=True)
+
+    # Metadata
+    name: str
+    content_type: str = "application/octet-stream"
+    size: int = 0
+    is_inline: bool = False
+
+    # Sync tracking
+    synced_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        Index("ix_cached_email_attachment_graph_mailbox", "graph_id", "mailbox", unique=True),
+    )
+
+
+class CachedMailFolder(SQLModel, table=True):
+    """Cached mail folder metadata."""
+    __tablename__ = "cached_mail_folder"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    # Graph identification
+    graph_id: str = Field(index=True)
+    mailbox: str = Field(index=True)
+
+    # Folder info
+    display_name: str = Field(index=True)
+    parent_folder_id: Optional[str] = None
+    child_folder_count: int = 0
+
+    # Counts
+    unread_count: int = 0
+    total_count: int = 0
+
+    # Sync tracking
+    synced_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        Index("ix_cached_mail_folder_graph_mailbox", "graph_id", "mailbox", unique=True),
+    )
+
+
 def init_db() -> None:
     """Create tables if they do not exist."""
     SQLModel.metadata.create_all(engine)
@@ -671,4 +778,8 @@ __all__ = [
     # Loop Engine tables
     "LoopRun",
     "LoopFinding",
+    # Email Cache tables
+    "CachedEmail",
+    "CachedEmailAttachment",
+    "CachedMailFolder",
 ]

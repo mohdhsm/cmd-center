@@ -243,7 +243,8 @@ class LoopMonitorScreen(Screen):
         """Fetch loop status."""
         response = await client.get(f"{self.api_url}/loops/status")
         if response.status_code == 200:
-            self.items = response.json()
+            data = response.json()
+            self.items = data.get("loops", [])
             self._render_status()
 
     def _render_status(self) -> None:
@@ -309,7 +310,8 @@ class LoopMonitorScreen(Screen):
             f"{self.api_url}/loops/findings", params=params
         )
         if response.status_code == 200:
-            self.items = response.json()
+            data = response.json()
+            self.items = data.get("items", [])
             self._render_findings()
 
     def _render_findings(self) -> None:
@@ -360,7 +362,8 @@ class LoopMonitorScreen(Screen):
             f"{self.api_url}/loops/runs", params=params
         )
         if response.status_code == 200:
-            self.items = response.json()
+            data = response.json()
+            self.items = data.get("items", [])
             self._render_history()
 
     def _render_history(self) -> None:

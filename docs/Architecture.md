@@ -23,7 +23,8 @@ The system is a keyboard-driven command center built on FastAPI + Textual + SQLi
 | Validation | Pydantic | 2.5.3 |
 | HTTP Client | httpx (async) | 0.26.0 |
 | LLM Provider | OpenRouter (Claude 3.5 Sonnet) | - |
-| Email | SMTP (Gmail-compatible) | - |
+| Email (SMTP) | SMTP (Gmail-compatible) | - |
+| Email (MSGraph) | Microsoft Graph API | App-only auth |
 | Microsoft Integration | Microsoft Graph API + MSAL | - |
 | Background Tasks | FastAPI lifespan + asyncio | - |
 
@@ -208,7 +209,8 @@ cmd_center/
 │   ├── notes_modal_screen.py       # Modal for viewing/adding notes
 │   ├── overdue_summary_modal.py    # CEO Radar: overdue summary
 │   ├── stuck_summary_modal.py      # CEO Radar: stuck summary
-│   └── order_received_summary_modal.py  # CEO Radar: order received summary
+│   ├── order_received_summary_modal.py  # CEO Radar: order received summary
+│   └── ceo_dashboard_screen.py     # Main CEO Dashboard (default on launch)
 ├── design/                         # CSS and design assets
 │
 ├── backend/
@@ -234,7 +236,8 @@ cmd_center/
 │   │   ├── bonuses.py              # Bonus tracking
 │   │   ├── employee_logs.py        # Employee log entries
 │   │   ├── skills.py               # Skills and ratings
-│   │   └── loops.py                # Loop engine endpoints
+│   │   ├── loops.py                # Loop engine endpoints
+│   │   └── ceo_dashboard.py        # CEO Dashboard aggregate metrics
 │   │
 │   ├── services/                   # Business logic
 │   │   ├── deal_health_service.py
@@ -272,6 +275,7 @@ cmd_center/
 │   │       ├── bonus_due_loop.py       # Bonus due date monitoring
 │   │       ├── task_overdue_loop.py    # Overdue task monitoring
 │   │       └── reminder_processing_loop.py  # Reminder processing
+│   │   └── ceo_dashboard_service.py  # CEO Dashboard aggregate service
 │   │
 │   ├── models/                     # Pydantic models (API contracts)
 │   │   ├── deal_models.py          # Includes summary response models
@@ -289,7 +293,8 @@ cmd_center/
 │   │   ├── bonus_models.py         # Bonus and payment models
 │   │   ├── employee_log_models.py  # Employee log models
 │   │   ├── skill_models.py         # Skill and rating models
-│   │   └── loop_models.py          # Loop engine models
+│   │   ├── loop_models.py          # Loop engine models
+│   │   └── ceo_dashboard_models.py # CEO Dashboard aggregate models
 │   │
 │   └── integrations/               # External API clients
 │       ├── config.py               # Pydantic settings
@@ -348,6 +353,14 @@ cmd_center/
 |-------|---------|--------------|
 | `loop_run` | Loop execution records | Status, duration, findings count |
 | `loop_finding` | Loop findings/alerts | Severity, deduplication via signature |
+
+### 4.8 Email Cache Tables (Microsoft Graph)
+
+| Table | Purpose | Sync Frequency |
+|-------|---------|----------------|
+| `cached_email` | Cached email messages | Every 15 minutes |
+| `cached_email_attachment` | Attachment metadata | With emails |
+| `cached_mail_folder` | Folder structure | With emails |
 
 ### 4.5 Entity Relationships
 
@@ -674,7 +687,36 @@ For LLM-powered content generation:
 - `OrderReceivedResult` - End user analysis
 - `NoteSummaryResult` - Summary with action items and owners
 
-### 5.4 Model Transformation
+### 5.6 MSGraph Email Models
+
+For email service interface (distinct from DTOs in microsoft_client.py):
+
+**Input Models:**
+- `EmailRecipientInput` - Email recipient for composing (email, name)
+- `EmailAttachmentInput` - Attachment with file path, optional name/content_type
+- `EmailComposeRequest` - Full email composition request
+- `EmailSearchFilters` - Search filters (subject, sender, dates, folder)
+
+**Response Models:**
+- `EmailAddress` - Address with optional name
+- `EmailAttachment` - Attachment metadata (id, name, content_type, size, is_inline)
+- `EmailMessage` - Full message with body, recipients, dates, attachments
+- `MailFolder` - Folder with name, counts
+- `EmailListResponse` - Paginated email list
+- `FolderListResponse` - Folder list with total
+
+### 5.7 CEO Dashboard Aggregate Models
+
+For the executive dashboard single-endpoint response:
+- `CashHealth` - Runway, collections, velocity with status indicators
+- `UrgentDeal` - Deal requiring attention with reason and days stuck
+- `StageVelocity` - Stage name with average days and deal count
+- `PipelineVelocity` - Stages, current cycle, target, trend
+- `StrategicPriority` - Name, current, target, percentage, status
+- `DepartmentScorecard` - Sales metrics (pipeline, won, overdue, status)
+- `CEODashboardMetrics` - Complete dashboard response
+
+### 5.8 Model Transformation
 
 Services transform database models to API models:
 
@@ -848,7 +890,13 @@ def get_overdue_deals(pipeline_name: str, min_days: int = 7) -> list[OverdueDeal
 | `/loops/runs/{id}` | GET | Get run details with findings |
 | `/loops/findings` | GET | List all findings with filters |
 
-### 6.8 Interventions (Audit Log)
+### 6.8 CEO Dashboard Metrics
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/ceo-dashboard/metrics` | GET | Aggregate dashboard with cash health, urgent deals, pipeline velocity, priorities, scorecard |
+
+### 6.9 Interventions (Audit Log)
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -888,6 +936,12 @@ def get_overdue_deals(pipeline_name: str, min_days: int = 7) -> list[OverdueDeal
 | `bonus_due_loop` | Uses `bonus_service`, `reminder_service` |
 | `task_overdue_loop` | Uses `task_service`, `reminder_service` |
 | `reminder_processing_loop` | Uses `reminder_service` |
+| **CEO Dashboard** | |
+| `ceo_dashboard_service` | Uses `cashflow_prediction_service`, `deal_health_service`, db_queries |
+| **Microsoft Graph Email** | |
+| `msgraph_email_service` | Uses `microsoft_client` for email operations (no DB storage) |
+| **Email Sync** | |
+| `email_sync` | Uses `msgraph_email_service`, writes to `CachedEmail`, `CachedMailFolder` |
 
 ### 7.2 Service Characteristics
 
@@ -1009,7 +1063,102 @@ Rule-based prediction logic for cashflow (primary prediction engine):
 - Medium (0.70): Normal stages
 - Low (0.50): Unknown stages or stuck deals
 
-### 7.4 CEO Dashboard Services
+### 7.4 CEO Dashboard Aggregate Service
+
+#### ceo_dashboard_service.py
+Executive dashboard aggregation with configurable targets:
+- `get_dashboard_metrics()` → `CEODashboardMetrics` (all sections in one call)
+- `_get_cash_health()` → `CashHealth` (runway, collections, velocity)
+- `_get_urgent_deals()` → `List[UrgentDeal]` (top 5 attention-required deals)
+- `_get_pipeline_velocity()` → `PipelineVelocity` (stage averages, cycle time, trend)
+- `_get_strategic_priorities()` → `List[StrategicPriority]` (cost reduction, sales, commercial share)
+- `_get_department_scorecard()` → `DepartmentScorecard` (sales MVP metrics)
+
+**Configuration (`CEODashboardConfig`):**
+- `weekly_collection_target`: 200,000 SAR
+- `monthly_burn_rate`: 50,000 SAR
+- `cash_balance`: 200,000 SAR (placeholder)
+- `commercial_collected_week`: 0 SAR (placeholder)
+- `cost_reduction_target`: 20%
+- `weekly_sales_target`: 500,000 SAR
+- `commercial_share_target`: 40%
+
+**Status Thresholds:**
+- Runway: green >3mo, yellow 1-3mo, red <1mo
+- Velocity: green >80%, yellow 50-80%, red <50%
+- Priorities: green >=90%, yellow >=70%, red <70%
+
+### 7.5 Microsoft Graph Email Service
+
+#### msgraph_email_service.py
+High-level email operations via Microsoft Graph API (no database storage):
+
+**Reading:**
+- `get_emails(mailbox, folder, unread_only, limit)` → `List[EmailMessage]`
+- `get_email_by_id(message_id, mailbox)` → `Optional[EmailMessage]`
+- `search_emails(mailbox, subject, sender, from_date, to_date, folder)` → `List[EmailMessage]`
+
+**Sending:**
+- `send_email(from_mailbox, to, subject, body, cc, bcc, attachments)` → `bool`
+
+**Actions:**
+- `reply(message_id, mailbox, comment, reply_all)` → `bool`
+- `forward(message_id, to, mailbox, comment)` → `bool`
+- `move_to_folder(message_id, destination_folder, mailbox)` → `bool`
+- `mark_as_read(message_id, mailbox)` → `bool`
+- `delete_email(message_id, mailbox)` → `bool`
+
+**Attachments:**
+- `get_attachments(message_id, mailbox)` → `List[EmailAttachment]`
+- `download_attachment(message_id, attachment_id, mailbox, save_dir)` → `Path`
+- `download_all_attachments(message_id, mailbox, save_dir)` → `List[Path]`
+
+**Folders:**
+- `get_folders(mailbox)` → `List[MailFolder]`
+- `create_folder(folder_name, parent_folder_id, mailbox)` → `MailFolder`
+- `get_folder_by_name(folder_name, mailbox)` → `Optional[MailFolder]`
+
+**Features:**
+- ✅ App-only authentication (client credentials flow)
+- ✅ Default mailbox: `mohammed@gyptech.com.sa`
+- ✅ Support for multiple mailboxes (delegated access)
+- ✅ Well-known folder name resolution (inbox, sentitems, drafts, etc.)
+- ✅ OData filter building for search queries
+- ✅ Automatic DTO conversion between client and service layers
+- ✅ Async/await throughout
+- ✅ No database storage (real-time Graph API calls)
+
+**Usage:**
+```python
+from cmd_center.backend.services import get_msgraph_email_service
+from cmd_center.backend.models import EmailAttachmentInput
+from pathlib import Path
+
+service = get_msgraph_email_service()
+
+# Get unread emails
+emails = await service.get_emails(unread_only=True)
+
+# Search emails
+results = await service.search_emails(subject="Invoice", sender="vendor@example.com")
+
+# Send email with attachment
+await service.send_email(
+    from_mailbox="mohammed@gyptech.com.sa",
+    to=["recipient@example.com"],
+    subject="Report",
+    body="<p>Please find attached.</p>",
+    attachments=[EmailAttachmentInput(file_path=Path("report.pdf"))]
+)
+
+# Reply to email
+await service.reply("msg-123", comment="Thanks for the update!")
+
+# Move to folder
+await service.move_to_folder("msg-123", destination_folder="Archive")
+```
+
+### 7.6 CEO Dashboard CRUD Services
 
 #### employee_service.py
 - `create_employee(data)` → `EmployeeResponse`
@@ -1062,7 +1211,7 @@ Rule-based prediction logic for cashflow (primary prediction engine):
 - `get_employee_skill_card(employee_id)` → `list[SkillWithRating]`
 - `get_latest_ratings(skill_id)` → `list[SkillRatingResponse]`
 
-### 7.5 Loop Engine
+### 7.7 Loop Engine
 
 #### loop_engine.py
 
@@ -1140,6 +1289,8 @@ class BaseLoop(ABC):
 | Activities | All open deals | With notes | 30 minutes |
 | Files | All open deals | With notes | 30 minutes |
 | Deals (won/lost) | Skip | Skip | N/A |
+| Emails (inbox) | Last 90 days | Incremental (7 days) | 15 minutes |
+| Folders | All | Full | With emails |
 
 ### 8.3 Scheduler (sync_scheduler.py)
 
@@ -1275,9 +1426,11 @@ async def sync_deals_incremental(pipeline_id: int):
 
 ### 9.4 microsoft_client.py
 
-**Purpose:** Microsoft Graph API integration for SharePoint & OneDrive
+**Purpose:** Microsoft Graph API integration for SharePoint, OneDrive, and Email
 
-**Key Methods:**
+**Auth Method:** Azure AD client credentials (app-only)
+
+**SharePoint & OneDrive Methods:**
 - `_get_access_token()` - MSAL client credentials flow
 - `list_files(drive_id)` - List OneDrive files
 - `get_file_info(drive_id, file_id)` - Get file metadata
@@ -1286,7 +1439,34 @@ async def sync_deals_incremental(pipeline_id: int):
 - `list_sharepoint_list_items(site_id, list_id)` - Query SharePoint list
 - `create_sharepoint_list_item(site_id, list_id, fields)` - Create list item
 
-**Auth Method:** Azure AD client credentials (app-only)
+**Email DTOs:**
+- `EmailAddress` - Email address with optional name
+- `EmailRecipient` - Wrapper for Graph API recipient format
+- `EmailBody` - Email body with content type (text/html)
+- `EmailAttachmentDTO` - Attachment metadata (id, name, content_type, size)
+- `EmailMessageDTO` - Full email message with all fields
+- `MailFolderDTO` - Folder metadata with counts
+
+**Email Methods:**
+- `get_mail_folders(mailbox, include_hidden)` → `List[MailFolderDTO]`
+- `get_mail_folder_by_name(mailbox, folder_name)` → `Optional[MailFolderDTO]`
+- `create_mail_folder(mailbox, display_name, parent_folder_id)` → `MailFolderDTO`
+- `get_messages(mailbox, folder_id, top, filter_query, order_by, select)` → `List[EmailMessageDTO]`
+- `get_message_by_id(mailbox, message_id)` → `Optional[EmailMessageDTO]`
+- `send_mail(mailbox, subject, body, to_recipients, cc_recipients, bcc_recipients, body_content_type, attachments, save_to_sent)` → `bool`
+- `reply_to_message(mailbox, message_id, comment, reply_all)` → `bool`
+- `forward_message(mailbox, message_id, to_recipients, comment)` → `bool`
+- `move_message(mailbox, message_id, destination_folder_id)` → `Optional[EmailMessageDTO]`
+- `update_message(mailbox, message_id, is_read, importance)` → `bool`
+- `delete_message(mailbox, message_id)` → `bool`
+- `get_message_attachments(mailbox, message_id)` → `List[EmailAttachmentDTO]`
+- `download_attachment(mailbox, message_id, attachment_id)` → `bytes`
+
+**HTTP Helper Methods:**
+- `_patch(endpoint, data)` - PATCH request with JSON response
+- `_delete(endpoint)` - DELETE request
+- `_get_binary(endpoint)` - GET request for binary content
+- `_post_no_response(endpoint, data)` - POST with no response body (204 expected)
 
 ---
 
@@ -1300,17 +1480,23 @@ async def sync_deals_incremental(pipeline_id: int):
 | Key | Action |
 |-----|--------|
 | `q` | Quit application |
-| `d` | Dashboard screen |
+| `d` | CEO Dashboard screen (default) |
 | `a` | Aramco pipeline screen |
 | `c` | Commercial pipeline screen |
 | `o` | Owner KPIs screen |
 | `e` | Email drafts screen |
+| `m` | Management screen |
+| `t` | Tracker screen |
+| `p` | Team screen |
+| `l` | Loop monitor screen |
+| `w` | War Room (old dashboard) |
 
 ### 10.2 Screens
 
 | Screen | File | Purpose |
 |--------|------|---------|
-| Dashboard | `dashboard_screen.py` | Today's focus with priority items |
+| CEO Dashboard | `ceo_dashboard_screen.py` | Main executive dashboard (default on launch) - cash health, urgent deals, velocity, priorities |
+| War Room | `dashboard_screen.py` | Today's focus with priority items |
 | Aramco Pipeline | `aramco_screen.py` | 5 modes: Overdue, Stuck, Order, Compliance, Cashflow |
 | Commercial | `commercial_screen.py` | Inactive deals + LLM summaries |
 | Owner KPIs | `owner_kpi_screen.py` | Salesperson performance metrics |
@@ -1404,9 +1590,37 @@ The Aramco screen supports:
 ✅ **Reminder Processing** - Processes and sends pending reminders
 ✅ **Finding Deduplication** - 24-hour deduplication using SHA256 signatures
 
-### 11.3 Test Coverage
-✅ **293 tests passing** - Unit tests + integration tests across all phases
+**CEO Dashboard (Executive View):**
+✅ **CEO Dashboard Screen** - Main executive dashboard (default on launch)
+✅ **Cash Health Monitor** - Runway, weekly collections, 14-day forecast, velocity
+✅ **Urgent Deals** - Top 5 attention-required deals with reasons
+✅ **Pipeline Velocity** - Stage-by-stage averages, cycle time, trend indicators
+✅ **Strategic Priorities** - Cost reduction, sales targets, commercial share
+✅ **Department Scorecard** - Sales MVP with pipeline, won, overdue metrics
+✅ **Configurable Targets** - Via CEODashboardConfig class
+
+### 11.3 Microsoft Graph Email Service (January 2025)
+
+**Email Operations (Service Layer Only - No API/UI):**
+✅ **Email Caching** - Local SQLite cache for fast email reads
+✅ **Email Reading** - Get emails from any mailbox folder with filtering
+✅ **Email Search** - Search by subject, sender, date range with OData queries
+✅ **Email Sending** - Send HTML emails with attachments to multiple recipients
+✅ **Email Actions** - Reply, forward, move, mark as read, delete
+✅ **Attachment Handling** - Download single or all attachments to disk
+✅ **Folder Management** - List, create, and lookup folders by name
+✅ **Multi-Mailbox Support** - Access any mailbox with proper permissions
+✅ **DTO Conversion** - Automatic conversion between client/service layers
+
+**Supported Mailboxes:**
+- `mohammed@gyptech.com.sa` (default)
+- `info@gyptech.com.sa`
+- Future team members (configurable)
+
+### 11.4 Test Coverage
+✅ **324+ tests passing** - Unit tests + integration tests across all phases
 ✅ **pytest infrastructure** - Async support, in-memory SQLite, reusable fixtures
+✅ **Email Service Tests** - 31 unit tests covering service initialization, DTO conversion, email operations
 
 ---
 
@@ -1533,6 +1747,15 @@ COMMERCIAL_PIPELINE_NAME=pipeline
   - Engine: `cmd_center/backend/services/loop_engine.py`
   - Setup: `cmd_center/backend/services/loop_setup.py`
   - Loops: `cmd_center/backend/services/loops/`
+- **CEO Dashboard (Aggregate):**
+  - Service: `cmd_center/backend/services/ceo_dashboard_service.py`
+  - API: `cmd_center/backend/api/ceo_dashboard.py`
+  - Models: `cmd_center/backend/models/ceo_dashboard_models.py`
+  - Screen: `cmd_center/screens/ceo_dashboard_screen.py`
+- **Microsoft Graph Email:**
+  - Service: `cmd_center/backend/services/msgraph_email_service.py`
+  - Models: `cmd_center/backend/models/msgraph_email_models.py`
+  - Client: `cmd_center/backend/integrations/microsoft_client.py`
 
 **API:**
 - All endpoints: `cmd_center/backend/api/`
@@ -1562,6 +1785,9 @@ COMMERCIAL_PIPELINE_NAME=pipeline
 - All tests: `tests/`
 - Config: `tests/conftest.py`
 - Integration tests: `tests/integration/`
+- Unit tests: `tests/unit/`
+- Contract tests: `tests/contract/`
+- Email service tests: `tests/unit/test_msgraph_email_service.py`
 
 **Documentation:**
 - Architecture: `docs/Architecture.md` (this file)
