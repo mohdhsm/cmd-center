@@ -1091,7 +1091,7 @@ Executive dashboard aggregation with configurable targets:
 ### 7.5 Microsoft Graph Email Service
 
 #### msgraph_email_service.py
-High-level email operations via Microsoft Graph API (no database storage):
+High-level email operations via Microsoft Graph API with local SQLite caching:
 
 **Reading:**
 - `get_emails(mailbox, folder, unread_only, limit)` → `List[EmailMessage]`
@@ -1118,6 +1118,11 @@ High-level email operations via Microsoft Graph API (no database storage):
 - `create_folder(folder_name, parent_folder_id, mailbox)` → `MailFolder`
 - `get_folder_by_name(folder_name, mailbox)` → `Optional[MailFolder]`
 
+**Cached Reads (Fast Local Queries):**
+- `get_cached_emails(mailbox, folder_id, unread_only, limit, offset)` → `List[EmailMessage]`
+- `get_cached_email_by_id(graph_id, mailbox)` → `Optional[EmailMessage]`
+- `get_cached_folders(mailbox)` → `List[MailFolder]`
+
 **Features:**
 - ✅ App-only authentication (client credentials flow)
 - ✅ Default mailbox: `mohammed@gyptech.com.sa`
@@ -1126,7 +1131,8 @@ High-level email operations via Microsoft Graph API (no database storage):
 - ✅ OData filter building for search queries
 - ✅ Automatic DTO conversion between client and service layers
 - ✅ Async/await throughout
-- ✅ No database storage (real-time Graph API calls)
+- ✅ Local SQLite caching for fast reads (CachedEmail, CachedMailFolder tables)
+- ✅ Background sync every 15 minutes via email_sync module
 
 **Usage:**
 ```python
@@ -1305,6 +1311,7 @@ async def lifespan_manager(app: FastAPI):
     # Start background sync tasks
     task_deals = asyncio.create_task(run_deals_sync())
     task_notes = asyncio.create_task(run_notes_sync())
+    task_emails = asyncio.create_task(email_loop())  # Email sync
 
     yield
 
@@ -1320,6 +1327,17 @@ async def run_notes_sync():
     while True:
         await sync_notes_for_open_deals()
         await asyncio.sleep(30 * 60)  # 30 minutes
+
+async def email_loop():
+    """Periodic email sync loop (every 15 minutes)."""
+    while True:
+        await asyncio.sleep(15 * 60)  # 15 minutes
+        await run_email_sync()
+
+async def run_email_sync():
+    """Run email sync for all mailboxes with TTL-based skipping."""
+    async with email_lock:
+        result = await sync_all_mailboxes(ttl_minutes=15)
 ```
 
 ### 8.4 Incremental Sync Logic
@@ -1601,8 +1619,10 @@ The Aramco screen supports:
 
 ### 11.3 Microsoft Graph Email Service (January 2025)
 
-**Email Operations (Service Layer Only - No API/UI):**
-✅ **Email Caching** - Local SQLite cache for fast email reads
+**Email Operations (Service Layer + Local Caching):**
+✅ **Email Caching** - Local SQLite cache for fast email reads (CachedEmail, CachedMailFolder tables)
+✅ **Background Sync** - 15-minute TTL-based sync with race condition protection
+✅ **Cached Reads** - `get_cached_emails()`, `get_cached_email_by_id()`, `get_cached_folders()` for fast local queries
 ✅ **Email Reading** - Get emails from any mailbox folder with filtering
 ✅ **Email Search** - Search by subject, sender, date range with OData queries
 ✅ **Email Sending** - Send HTML emails with attachments to multiple recipients
@@ -1612,15 +1632,23 @@ The Aramco screen supports:
 ✅ **Multi-Mailbox Support** - Access any mailbox with proper permissions
 ✅ **DTO Conversion** - Automatic conversion between client/service layers
 
+**Email Sync Module (email_sync.py):**
+- `sync_emails_for_mailbox(mailbox, days_back, folder, limit)` - Sync emails from Graph API to local cache
+- `sync_folders_for_mailbox(mailbox)` - Sync folder structure
+- `sync_all_mailboxes(days_back, ttl_minutes, concurrency)` - Sync all configured mailboxes
+- `get_last_email_sync_time(mailbox)` - Get last sync timestamp
+- `is_sync_in_progress(mailbox)` - Check for concurrent sync (race condition prevention)
+
 **Supported Mailboxes:**
 - `mohammed@gyptech.com.sa` (default)
 - `info@gyptech.com.sa`
-- Future team members (configurable)
+- Future team members (configurable via SYNC_MAILBOXES)
 
 ### 11.4 Test Coverage
-✅ **324+ tests passing** - Unit tests + integration tests across all phases
+✅ **649+ tests passing** - Unit tests + integration tests + contract tests across all phases
 ✅ **pytest infrastructure** - Async support, in-memory SQLite, reusable fixtures
-✅ **Email Service Tests** - 31 unit tests covering service initialization, DTO conversion, email operations
+✅ **Email Service Tests** - 53 tests covering service, sync, scheduler, and cached reads
+✅ **CEO Dashboard Tests** - Contract tests, unit tests, and integration tests
 
 ---
 
@@ -1754,6 +1782,7 @@ COMMERCIAL_PIPELINE_NAME=pipeline
   - Screen: `cmd_center/screens/ceo_dashboard_screen.py`
 - **Microsoft Graph Email:**
   - Service: `cmd_center/backend/services/msgraph_email_service.py`
+  - Sync Module: `cmd_center/backend/services/email_sync.py`
   - Models: `cmd_center/backend/models/msgraph_email_models.py`
   - Client: `cmd_center/backend/integrations/microsoft_client.py`
 
@@ -1788,6 +1817,9 @@ COMMERCIAL_PIPELINE_NAME=pipeline
 - Unit tests: `tests/unit/`
 - Contract tests: `tests/contract/`
 - Email service tests: `tests/unit/test_msgraph_email_service.py`
+- Email sync tests: `tests/unit/test_email_sync.py`
+- Email scheduler tests: `tests/unit/test_email_scheduler.py`
+- Email DB tables tests: `tests/unit/test_email_db_tables.py`
 
 **Documentation:**
 - Architecture: `docs/Architecture.md` (this file)
