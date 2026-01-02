@@ -13,6 +13,7 @@ from .notes_modal_screen import NotesModalScreen
 from .overdue_summary_modal import OverdueSummaryModal
 from .stuck_summary_modal import StuckSummaryModal
 from .order_received_summary_modal import OrderReceivedSummaryModal
+from .followup_email_modal import FollowupEmailModal
 
 
 class AramcoPipelineScreen(Screen):
@@ -398,6 +399,27 @@ class AramcoPipelineScreen(Screen):
                     self.app.push_screen(modal)
                 except ValueError:
                     self.notify("Invalid deal ID.", severity="warning")
+        elif event.button.id == "generate-followup-button":
+            # Get selected deal ID from table cursor
+            table = self.query_one("#aramco-table", DataTable)
+            cursor_row, cursor_col = table.cursor_coordinate
+            cell_key = table.coordinate_to_cell_key((cursor_row, cursor_col))
+            row_key_obj = cell_key.row_key if cell_key else None
+            row_key_value = row_key_obj.value if row_key_obj is not None else None
+
+            if row_key_value is None:
+                self.notify("Select a deal row first (not a group header).", severity="warning")
+                return
+
+            try:
+                deal_id_int = int(row_key_value)
+            except ValueError:
+                self.notify("Invalid deal ID.", severity="warning")
+                return
+
+            # Generate email via API
+            self.notify("Generating email...", severity="info")
+            await self._show_followup_modal(deal_id_int)
         elif event.button.id == "view-summary-button":
             # Route to correct modal based on current mode
             if self.current_mode == "overdue":
@@ -415,7 +437,48 @@ class AramcoPipelineScreen(Screen):
 
             self.notify("Loading summary...", severity="info")
             self.app.push_screen(modal)
-    
+
+    async def _show_followup_modal(self, deal_id: int) -> None:
+        """Fetch email template and show the modal."""
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self.api_url}/emails/followup/generate",
+                    json={
+                        "deal_id": deal_id,
+                        "mode": self.current_mode,
+                        "recipient_email": "mohd@gyptech.com.sa",
+                    }
+                )
+
+                if response.status_code == 404:
+                    self.notify("Deal not found.", severity="error")
+                    return
+
+                response.raise_for_status()
+                data = response.json()
+
+                modal = FollowupEmailModal(
+                    api_url=self.api_url,
+                    deal_id=deal_id,
+                    subject=data["subject"],
+                    body=data["body"],
+                    recipient_email=data["recipient_email"],
+                )
+
+                def on_dismiss(result: bool) -> None:
+                    if result:
+                        self.notify("Email sent successfully!", severity="information")
+                    # else cancelled, no message needed
+
+                self.app.push_screen(modal, on_dismiss)
+
+        except httpx.TimeoutException:
+            self.notify("Request timed out.", severity="error")
+        except Exception as e:
+            log(f"Error generating email: {e}")
+            self.notify(f"Error: {str(e)[:40]}", severity="error")
+
     def action_mode_overdue(self) -> None:
         """Switch to overdue mode."""
         self.current_mode = "overdue"
