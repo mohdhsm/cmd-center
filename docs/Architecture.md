@@ -639,6 +639,7 @@ Used for API responses:
 - `OwnerKPI`, `OwnerKPIWithComment`
 - `DashboardItem`
 - `EmailDraft`, `DealIssue`
+- `FollowupEmailRequest`, `FollowupEmailResponse`, `SendFollowupRequest` - Single-deal follow-up email models
 - `DealNote`, `DealActivity`, `DealFile`, `DealComment`
 
 ### 5.3 CEO Radar Summary Models
@@ -778,8 +779,10 @@ def get_overdue_deals(pipeline_name: str, min_days: int = 7) -> list[OverdueDeal
 
 | Endpoint | Method | Service | Description |
 |----------|--------|---------|-------------|
-| `/emails/followups/generate` | POST | email_service | Generate email drafts |
-| `/emails/followups/send` | POST | email_service | Send emails |
+| `/emails/followups/generate` | POST | email_service | Generate email drafts (batch) |
+| `/emails/followups/send` | POST | email_service | Send emails (batch) |
+| `/emails/followup/generate` | POST | email_service | Generate follow-up email for single deal (mode-specific: overdue/stuck/order) |
+| `/emails/followup/send` | POST | msgraph_email_service | Send follow-up email and log to intervention table |
 
 ### 6.4 Sync Endpoints
 
@@ -1529,6 +1532,7 @@ async def sync_deals_incremental(pipeline_id: int):
 | Stuck Summary | `stuck_summary_modal.py` | Snapshot, PM control, worst deals, bottlenecks |
 | Order Received Summary | `order_received_summary_modal.py` | Snapshot, PM acceleration, blockers, fast wins |
 | Notes Modal | `notes_modal_screen.py` | View/add notes to deals |
+| Follow-up Email | `followup_email_modal.py` | Edit and send mode-specific follow-up emails |
 
 ### 10.4 Screen Data Loading
 
@@ -1582,6 +1586,7 @@ The Aramco screen supports:
 ✅ **Multi-Pipeline Support** - Aramco + Commercial focused
 ✅ **Local Caching** - SQLite for fast reads, async sync for updates
 ✅ **Notes Modal** - View and add notes to deals
+✅ **Follow-up Email Modal** - Mode-specific email generation (overdue/stuck/order) with editable modal and intervention logging
 
 ### 11.2 CEO Dashboard Features (December 2024)
 

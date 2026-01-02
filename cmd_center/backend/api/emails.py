@@ -129,7 +129,7 @@ async def send_followup_email(request: SendFollowupRequest):
     # Send the email
     try:
         success = await email_service.send_email(
-            from_mailbox="mohammed@gyptech.com.sa",
+            from_mailbox="mohd@gyptech.com.sa",
             to=[request.recipient_email],
             subject=request.subject,
             body=request.body,

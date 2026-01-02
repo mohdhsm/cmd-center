@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Mailboxes to sync
 SYNC_MAILBOXES = [
-    "mohammed@gyptech.com.sa",
+    "mohd@gyptech.com.sa",
     "info@gyptech.com.sa",
 ]
 
