@@ -7,7 +7,9 @@ from typing import List
 from fastapi import APIRouter, HTTPException, Query
 
 from ..models import EmailDraft
-from ..models.email_models import FollowupEmailRequest, FollowupEmailResponse
+from ..models.email_models import FollowupEmailRequest, FollowupEmailResponse, SendFollowupRequest
+from ..services.msgraph_email_service import get_msgraph_email_service
+from ..services.intervention_service import log_action
 from ..services import get_email_service
 from ..services.db_queries import get_deal_by_id
 
@@ -116,3 +118,69 @@ Thanks,
         body=body,
         recipient_email=request.recipient_email,
     )
+
+
+@router.post("/followup/send")
+async def send_followup_email(request: SendFollowupRequest):
+    """Send a follow-up email and log the intervention."""
+    # Get the email service
+    email_service = get_msgraph_email_service()
+
+    # Send the email
+    try:
+        success = await email_service.send_email(
+            from_mailbox="mohammed@gyptech.com.sa",
+            to=[request.recipient_email],
+            subject=request.subject,
+            body=request.body,
+            body_type="text",
+            save_to_sent=True,
+        )
+    except Exception as e:
+        # Log failed attempt
+        log_action(
+            actor="system",
+            object_type="deal",
+            object_id=request.deal_id,
+            action_type="email_sent",
+            summary=f"Failed to send follow-up email: {str(e)}",
+            status="failed",
+            details={
+                "recipient": request.recipient_email,
+                "subject": request.subject,
+                "error": str(e),
+            }
+        )
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+
+    if not success:
+        log_action(
+            actor="system",
+            object_type="deal",
+            object_id=request.deal_id,
+            action_type="email_sent",
+            summary=f"Failed to send follow-up email to {request.recipient_email}",
+            status="failed",
+            details={
+                "recipient": request.recipient_email,
+                "subject": request.subject,
+            }
+        )
+        raise HTTPException(status_code=500, detail="Email sending failed")
+
+    # Log successful intervention
+    log_action(
+        actor="system",
+        object_type="deal",
+        object_id=request.deal_id,
+        action_type="email_sent",
+        summary=f"Sent follow-up email to {request.recipient_email}: {request.subject}",
+        status="done",
+        details={
+            "recipient": request.recipient_email,
+            "subject": request.subject,
+            "body_preview": request.body[:200] if request.body else "",
+        }
+    )
+
+    return {"status": "sent", "deal_id": request.deal_id}

@@ -41,3 +41,11 @@ class FollowupEmailResponse(BaseModel):
     subject: str
     body: str
     recipient_email: str
+
+
+class SendFollowupRequest(BaseModel):
+    """Request to send a follow-up email."""
+    deal_id: int
+    recipient_email: str
+    subject: str
+    body: str
