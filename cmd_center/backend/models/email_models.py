@@ -18,9 +18,26 @@ class DealIssue(BaseModel):
 
 class EmailDraft(BaseModel):
     """Email draft to a salesperson about multiple deals."""
-    
+
     salesperson: OwnerName
     to_email: str
     subject: str
     body: str
     deals: list[DealIssue]
+
+
+class FollowupEmailRequest(BaseModel):
+    """Request to generate a follow-up email for a deal."""
+    deal_id: int
+    mode: str  # "overdue", "stuck", "order"
+    recipient_email: str = "mohd@gyptech.com.sa"  # Default for testing
+
+
+class FollowupEmailResponse(BaseModel):
+    """Pre-filled email template response."""
+    deal_id: int
+    deal_title: str
+    owner_name: str
+    subject: str
+    body: str
+    recipient_email: str
