@@ -1,5 +1,7 @@
 """Agent chat screen for Omnious."""
 
+import asyncio
+
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.containers import Vertical, VerticalScroll
@@ -135,18 +137,28 @@ class AgentScreen(Screen):
         chat = self.query_one("#chat-container", VerticalScroll)
         chat.mount(MessageWidget("user", user_input))
 
-        # Create assistant message placeholder
-        self._current_message = MessageWidget("assistant", "")
+        # Create assistant message placeholder with loading indicator
+        self._current_message = MessageWidget("assistant", "⏳ Waiting for reply...")
         chat.mount(self._current_message)
+        chat.scroll_end()
 
         # Update status
         self._set_status("Thinking...")
 
+        # Force UI refresh before starting async work
+        await asyncio.sleep(0)
+
         # Stream response
+        first_text = True
         try:
             async for chunk in self.agent.chat_stream(user_input):
                 if chunk.type == "text" and chunk.content:
-                    self._append_to_current(chunk.content)
+                    if first_text:
+                        # Replace loading message with first text
+                        self._current_message.set_content(chunk.content)
+                        first_text = False
+                    else:
+                        self._append_to_current(chunk.content)
                 elif chunk.type == "tool_call":
                     self._set_status(f"Using {chunk.tool_name}...")
                 elif chunk.type == "error":
