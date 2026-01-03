@@ -16,6 +16,7 @@ from .screens import (
     LoopMonitorScreen,
     CEODashboardScreen,
 )
+from .screens.agent_screen import AgentScreen
 
 
 class CommandCenterApp(App):
@@ -46,6 +47,7 @@ class CommandCenterApp(App):
         ("p", "switch_screen('team')", "Team"),
         ("l", "switch_screen('loops')", "Loops"),
         ("w", "switch_screen('dashboard')", "War Room"),  # Old dashboard as "War Room"
+        ("i", "open_agent", "Omnious"),
     ]
     
     def __init__(self, api_url: str = "http://127.0.0.1:8000"):
@@ -72,6 +74,10 @@ class CommandCenterApp(App):
     def action_switch_screen(self, screen_name: str) -> None:
         """Switch to a different screen."""
         self.switch_screen(screen_name)
+
+    def action_open_agent(self) -> None:
+        """Open Omnious agent screen."""
+        self.push_screen(AgentScreen())
 
 
 def main():
