@@ -124,13 +124,13 @@ class AgentScreen(Screen):
         """Focus input on mount."""
         self.query_one("#chat-input", Input).focus()
 
-    async def on_input_submitted(self, event: Input.Submitted) -> None:
+    def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle user input submission."""
         user_input = event.value.strip()
         if not user_input:
             return
 
-        # Clear input
+        # Clear input immediately
         event.input.value = ""
 
         # Add user message
@@ -145,11 +145,14 @@ class AgentScreen(Screen):
         # Update status
         self._set_status("Thinking...")
 
-        # Force UI refresh before starting async work
-        await asyncio.sleep(0)
+        # Run streaming in background worker so UI stays responsive
+        self.run_worker(self._stream_response(user_input), exclusive=True)
 
-        # Stream response
+    async def _stream_response(self, user_input: str) -> None:
+        """Stream the agent response (runs in background worker)."""
+        chat = self.query_one("#chat-container", VerticalScroll)
         first_text = True
+
         try:
             async for chunk in self.agent.chat_stream(user_input):
                 if chunk.type == "text" and chunk.content:
