@@ -210,20 +210,21 @@ class OmniousAgent:
 
         return results
 
-    async def chat(self, message: str) -> str:
-        """Send a message and get a response (non-streaming).
+    async def _call_llm_with_tools(self, messages: List[Dict[str, Any]], max_iterations: int = 10) -> str:
+        """Call LLM with tools, handling tool calls in a loop.
+
+        This implements the ReAct pattern where the LLM can iteratively call tools
+        and receive results until it has enough information to respond.
 
         Args:
-            message: User's message
+            messages: Messages to send to the LLM
+            max_iterations: Maximum number of tool-calling iterations to prevent infinite loops
 
         Returns:
-            Assistant's response
+            Final text response from the LLM
         """
-        messages = self._build_messages(message)
         tools_schema = self.tools.get_tools_schema()
-
-        # Add user message to history
-        self._add_to_history("user", message)
+        iteration = 0
 
         # Initial API call
         response = await self._call_api_with_retry(messages, tools_schema)
@@ -240,6 +241,10 @@ class OmniousAgent:
 
         # Handle tool calls in a loop (ReAct pattern)
         while "tool_calls" in assistant_message and assistant_message["tool_calls"]:
+            iteration += 1
+            if iteration > max_iterations:
+                break
+
             # Process tool calls
             tool_results = await self._process_tool_calls(assistant_message["tool_calls"])
 
@@ -263,7 +268,24 @@ class OmniousAgent:
             assistant_message = response_data["choices"][0]["message"]
 
         # Get final content
-        content = assistant_message.get("content", "")
+        return assistant_message.get("content", "")
+
+    async def chat(self, message: str) -> str:
+        """Send a message and get a response (non-streaming).
+
+        Args:
+            message: User's message
+
+        Returns:
+            Assistant's response
+        """
+        messages = self._build_messages(message)
+
+        # Add user message to history
+        self._add_to_history("user", message)
+
+        # Call LLM with tool handling
+        content = await self._call_llm_with_tools(messages)
 
         # Add to history
         self._add_to_history("assistant", content)
