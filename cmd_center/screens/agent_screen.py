@@ -32,7 +32,18 @@ class MessageWidget(Static):
     def __init__(self, role: str, content: str = ""):
         super().__init__(content)
         self.role = role
+        self._content = content
         self.add_class(role)
+
+    def append_content(self, text: str) -> None:
+        """Append text to the message content."""
+        self._content += text
+        self.update(self._content)
+
+    def set_content(self, text: str) -> None:
+        """Set the message content."""
+        self._content = text
+        self.update(self._content)
 
 
 class AgentScreen(Screen):
@@ -152,7 +163,7 @@ class AgentScreen(Screen):
                 "I'll try my best to help - could you rephrase your question?"
             )
             if self._current_message:
-                self._current_message.update(error_message)
+                self._current_message.set_content(error_message)
             self._set_status("Error - Ready")
 
         # Scroll to bottom
@@ -161,8 +172,7 @@ class AgentScreen(Screen):
     def _append_to_current(self, text: str) -> None:
         """Append text to current message."""
         if self._current_message:
-            current = str(self._current_message.renderable)
-            self._current_message.update(current + text)
+            self._current_message.append_content(text)
 
     def _set_status(self, status: str) -> None:
         """Update status bar."""
