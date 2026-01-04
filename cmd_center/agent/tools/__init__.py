@@ -1,7 +1,7 @@
 """Agent tools for querying data."""
 
 from .registry import ToolRegistry, get_tool_registry
-from .base import BaseTool, ToolResult
+from .base import BaseTool, ToolResult, PendingAction
 
 # Pipeline tools
 from .pipeline_tools import GetOverdueDeals, GetStuckDeals, GetDealDetails, GetDealNotes
@@ -33,6 +33,7 @@ __all__ = [
     "get_tool_registry",
     "BaseTool",
     "ToolResult",
+    "PendingAction",
     # Phase 1 tools - Pipeline
     "GetOverdueDeals",
     "GetStuckDeals",
