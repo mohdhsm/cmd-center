@@ -438,15 +438,39 @@ class OmniousAgent:
         if self.has_pending_action():
             confirmation = self._is_confirmation(message)
             if confirmation == "yes":
+                # Add user confirmation to history
+                self._add_to_history("user", message)
+
                 result = self.executor.execute(self.pending_action)
                 self.pending_action = None
                 if result["success"]:
-                    return f"Done! {result.get('action', 'Action completed')}. ID: {result.get('id', 'N/A')}"
+                    # Build response from result data
+                    result_data = result.get("result", {})
+                    # Try to find an ID in the result (task_id, note_id, reminder_id, deal_id)
+                    result_id = (
+                        result_data.get("task_id") or
+                        result_data.get("note_id") or
+                        result_data.get("reminder_id") or
+                        result_data.get("deal_id") or
+                        "N/A"
+                    )
+                    response = f"Done! Action completed successfully. ID: {result_id}"
                 else:
-                    return f"Sorry, there was an error: {result.get('error', 'Unknown error')}"
+                    response = f"Sorry, there was an error: {result.get('error', 'Unknown error')}"
+
+                # Add assistant response to history
+                self._add_to_history("assistant", response)
+                return response
             elif confirmation == "no":
+                # Add user cancellation to history
+                self._add_to_history("user", message)
+
                 self.pending_action = None
-                return "No problem, I won't proceed with that action. How else can I help?"
+                response = "No problem, I won't proceed with that action. How else can I help?"
+
+                # Add assistant response to history
+                self._add_to_history("assistant", response)
+                return response
 
         # Rest of existing chat logic
         messages = self._build_messages(message)

@@ -93,11 +93,10 @@ class TestChatExecutesOnYes:
             payload={"title": "Follow up"},
         )
 
-        # Mock the executor
+        # Mock the executor with realistic return value
         agent.executor.execute = MagicMock(return_value={
             "success": True,
-            "action": "Task created",
-            "id": 123,
+            "result": {"task_id": 123, "title": "Follow up"},
         })
 
         # User confirms
@@ -154,11 +153,10 @@ class TestChatExecutesOnYes:
                 payload={"title": "Test"},
             )
 
-            # Mock the executor
+            # Mock the executor with realistic return value
             agent.executor.execute = MagicMock(return_value={
                 "success": True,
-                "action": "Task created",
-                "id": 1,
+                "result": {"task_id": 1, "title": "Test"},
             })
 
             response = await agent.chat(phrase)
