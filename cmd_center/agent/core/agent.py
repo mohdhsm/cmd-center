@@ -14,6 +14,7 @@ from ..tools.task_tools import GetTasks, GetOverdueTasks
 from ..tools.employee_tools import GetEmployees, GetEmployeeDetails, GetEmployeeSkills, GetOwnerKPIs
 from ..tools.financial_tools import GetCashflowProjection, GetCEODashboard
 from ..tools.email_tools import SearchEmails, GetEmails
+from ..tools.document_tools import GetExpiringDocuments
 from ..observability.metrics import MetricsTracker, get_metrics_tracker
 from .prompts import build_system_prompt
 
@@ -77,6 +78,9 @@ class OmniousAgent:
         # Email tools
         self.tools.register(SearchEmails())
         self.tools.register(GetEmails())
+
+        # Document tools
+        self.tools.register(GetExpiringDocuments())
 
     def _build_messages(self, user_message: str) -> List[Dict[str, Any]]:
         """Build messages array for API call.
