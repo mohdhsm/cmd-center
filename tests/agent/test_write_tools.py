@@ -1,7 +1,6 @@
 """Tests for write tools that return PendingAction for confirmation."""
 
 import pytest
-from datetime import datetime
 
 from cmd_center.agent.tools.write_tools import (
     RequestCreateTask,

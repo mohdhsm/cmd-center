@@ -27,6 +27,16 @@ from .hr_tools import GetUnpaidBonuses
 # Knowledge tools
 from .knowledge_tools import ReadKnowledge
 
+# Write tools
+from .write_tools import (
+    RequestCreateTask,
+    RequestCreateNote,
+    RequestCreateReminder,
+    RequestSendEmail,
+    RequestUpdateDeal,
+    RequestAddDealNote,
+)
+
 __all__ = [
     # Registry
     "ToolRegistry",
@@ -61,4 +71,11 @@ __all__ = [
     "GetUnpaidBonuses",
     # Phase 2 tools - Knowledge
     "ReadKnowledge",
+    # Phase 3 tools - Write
+    "RequestCreateTask",
+    "RequestCreateNote",
+    "RequestCreateReminder",
+    "RequestSendEmail",
+    "RequestUpdateDeal",
+    "RequestAddDealNote",
 ]
