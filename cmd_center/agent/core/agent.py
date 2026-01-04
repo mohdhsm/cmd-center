@@ -9,6 +9,7 @@ import httpx
 
 from ...backend.integrations.config import get_config
 from ..tools.registry import ToolRegistry
+from ..tools.base import PendingAction
 
 if TYPE_CHECKING:
     from ..persistence import ConversationStore
@@ -64,6 +65,9 @@ class OmniousAgent:
         self._persist = persist
         self._store: Optional["ConversationStore"] = None
         self.conversation_id: Optional[int] = None
+
+        # Pending action for confirmation flow
+        self.pending_action: Optional[PendingAction] = None
 
         if self._persist:
             self._init_store()
@@ -153,6 +157,37 @@ class OmniousAgent:
     def clear_conversation(self) -> None:
         """Clear conversation history."""
         self.conversation_history = []
+
+    def has_pending_action(self) -> bool:
+        """Check if there's a pending action awaiting confirmation."""
+        return self.pending_action is not None
+
+    def get_pending_preview(self) -> Optional[str]:
+        """Get preview of pending action for display."""
+        if self.pending_action is None:
+            return None
+        return self.pending_action.preview
+
+    def _is_confirmation(self, message: str) -> Optional[str]:
+        """Check if message is a confirmation response.
+
+        Args:
+            message: User message
+
+        Returns:
+            "yes" if affirmative, "no" if negative, None otherwise
+        """
+        msg_lower = message.strip().lower()
+
+        yes_words = {"yes", "y", "confirm", "ok", "proceed", "do it", "go ahead", "sure", "yep", "yeah"}
+        no_words = {"no", "n", "cancel", "stop", "abort", "never mind", "nope", "nah"}
+
+        if msg_lower in yes_words:
+            return "yes"
+        if msg_lower in no_words:
+            return "no"
+
+        return None
 
     def start_new_conversation(self, title: str = "New Conversation") -> int:
         """Start a new conversation and persist it.
