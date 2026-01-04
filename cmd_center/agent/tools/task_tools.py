@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 from .base import BaseTool, ToolResult
 from ...backend.services.task_service import get_task_service
+from ...backend.services.reminder_service import get_reminder_service
 from ...backend.models.task_models import TaskFilters
 
 
@@ -111,6 +112,51 @@ class GetOverdueTasks(BaseTool):
                 data={
                     "tasks": tasks_data,
                     "count": len(tasks_data),
+                }
+            )
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+
+
+class GetPendingRemindersParams(BaseModel):
+    """Parameters for get_pending_reminders tool."""
+    limit: int = Field(
+        default=20,
+        description="Maximum number of reminders to return"
+    )
+
+
+class GetPendingReminders(BaseTool):
+    """Get pending reminders that haven't been completed."""
+
+    name = "get_pending_reminders"
+    description = "Get pending reminders that haven't been completed. Use this to track what needs follow-up."
+    parameters_model = GetPendingRemindersParams
+
+    def execute(self, params: GetPendingRemindersParams) -> ToolResult:
+        """Execute the tool."""
+        try:
+            service = get_reminder_service()
+            reminders = service.get_pending_reminders(limit=params.limit)
+
+            reminders_data = [
+                {
+                    "id": r.id,
+                    "target_type": r.target_type,
+                    "target_id": r.target_id,
+                    "remind_at": r.remind_at.isoformat() if r.remind_at else None,
+                    "channel": r.channel,
+                    "message": r.message,
+                    "status": r.status,
+                }
+                for r in reminders
+            ]
+
+            return ToolResult(
+                success=True,
+                data={
+                    "reminders": reminders_data,
+                    "count": len(reminders_data),
                 }
             )
         except Exception as e:
