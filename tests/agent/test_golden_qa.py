@@ -85,13 +85,15 @@ class TestGoldenToolSelection:
             "get_expiring_documents",
             # HR tools
             "get_unpaid_bonuses",
+            # Knowledge tools
+            "read_knowledge",
         ]
 
         tool_names = [t["name"] for t in tools]
         for expected in expected_tools:
             assert expected in tool_names, f"Missing tool: {expected}"
 
-        assert len(tools) == 18, f"Expected 18 tools, got {len(tools)}"
+        assert len(tools) == 19, f"Expected 19 tools, got {len(tools)}"
 
     def test_tools_have_descriptions(self):
         """All tools have non-empty descriptions."""

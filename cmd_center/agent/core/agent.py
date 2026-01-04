@@ -16,6 +16,7 @@ from ..tools.financial_tools import GetCashflowProjection, GetCEODashboard
 from ..tools.email_tools import SearchEmails, GetEmails
 from ..tools.document_tools import GetExpiringDocuments
 from ..tools.hr_tools import GetUnpaidBonuses
+from ..tools.knowledge_tools import ReadKnowledge
 from ..observability.metrics import MetricsTracker, get_metrics_tracker
 from .prompts import build_system_prompt
 
@@ -87,6 +88,9 @@ class OmniousAgent:
 
         # HR tools
         self.tools.register(GetUnpaidBonuses())
+
+        # Knowledge tools
+        self.tools.register(ReadKnowledge())
 
     def _build_messages(self, user_message: str) -> List[Dict[str, Any]]:
         """Build messages array for API call.
