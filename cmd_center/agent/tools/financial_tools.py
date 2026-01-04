@@ -7,6 +7,7 @@ from ...backend.services.cashflow_prediction_service import (
     get_cashflow_prediction_service,
     CashflowPredictionInput,
 )
+from ...backend.services.ceo_dashboard_service import get_ceo_dashboard_service
 
 
 class GetCashflowProjectionParams(BaseModel):
@@ -101,6 +102,120 @@ class GetCashflowProjection(BaseTool):
                     },
                     "pipeline_name": params.pipeline_name,
                     "granularity": params.granularity,
+                },
+            )
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+
+
+class GetCEODashboardParams(BaseModel):
+    """Parameters for get_ceo_dashboard tool."""
+
+    pass  # No parameters needed - returns full dashboard
+
+
+class GetCEODashboard(BaseTool):
+    """Get CEO dashboard metrics overview."""
+
+    name = "get_ceo_dashboard"
+    description = (
+        "Get executive dashboard metrics including cash health, runway status, "
+        "urgent deals requiring attention, pipeline velocity, strategic priorities, "
+        "and department scorecards. Use this for a high-level business overview."
+    )
+    parameters_model = GetCEODashboardParams
+
+    def execute(self, params: GetCEODashboardParams) -> ToolResult:
+        """Execute the tool."""
+        try:
+            service = get_ceo_dashboard_service()
+
+            # The service's get_dashboard_metrics is async, so we need to run it
+            result = run_async(service.get_dashboard_metrics())
+
+            # Transform cash health
+            cash_health = {
+                "runway_months": result.cash_health.runway_months,
+                "runway_status": result.cash_health.runway_status,
+                "aramco_collected_week": result.cash_health.aramco_collected_week,
+                "aramco_target_week": result.cash_health.aramco_target_week,
+                "commercial_collected_week": result.cash_health.commercial_collected_week,
+                "commercial_target_week": result.cash_health.commercial_target_week,
+                "total_collected_week": result.cash_health.total_collected_week,
+                "total_target_week": result.cash_health.total_target_week,
+                "collection_pct": result.cash_health.collection_pct,
+                "predicted_14d": result.cash_health.predicted_14d,
+                "velocity_pct": result.cash_health.velocity_pct,
+                "velocity_status": result.cash_health.velocity_status,
+            }
+
+            # Transform urgent deals
+            urgent_deals = [
+                {
+                    "deal_id": deal.deal_id,
+                    "title": deal.title,
+                    "reason": deal.reason,
+                    "value_sar": deal.value_sar,
+                    "stage": deal.stage,
+                    "owner": deal.owner,
+                    "days_stuck": deal.days_stuck,
+                }
+                for deal in result.urgent_deals
+            ]
+
+            # Transform pipeline velocity
+            pipeline_velocity = {
+                "stages": [
+                    {
+                        "name": stage.name,
+                        "stage_id": stage.stage_id,
+                        "avg_days": stage.avg_days,
+                        "deal_count": stage.deal_count,
+                    }
+                    for stage in result.pipeline_velocity.stages
+                ],
+                "current_cycle_days": result.pipeline_velocity.current_cycle_days,
+                "target_cycle_days": result.pipeline_velocity.target_cycle_days,
+                "trend": result.pipeline_velocity.trend,
+                "trend_pct": result.pipeline_velocity.trend_pct,
+            }
+
+            # Transform strategic priorities
+            strategic_priorities = [
+                {
+                    "name": priority.name,
+                    "current": priority.current,
+                    "target": priority.target,
+                    "pct": priority.pct,
+                    "status": priority.status,
+                    "unit": priority.unit,
+                }
+                for priority in result.strategic_priorities
+            ]
+
+            # Transform department scorecard
+            department_scorecard = {
+                "sales": {
+                    "pipeline_value": result.department_scorecard.sales.pipeline_value,
+                    "won_value": result.department_scorecard.sales.won_value,
+                    "active_deals_count": result.department_scorecard.sales.active_deals_count,
+                    "overdue_count": result.department_scorecard.sales.overdue_count,
+                    "status": result.department_scorecard.sales.status,
+                }
+            }
+
+            return ToolResult(
+                success=True,
+                data={
+                    "metrics": {
+                        "cash_health": cash_health,
+                        "urgent_deals": urgent_deals,
+                        "pipeline_velocity": pipeline_velocity,
+                        "strategic_priorities": strategic_priorities,
+                        "department_scorecard": department_scorecard,
+                        "last_updated": result.last_updated,
+                        "data_freshness": result.data_freshness,
+                    }
                 },
             )
         except Exception as e:
