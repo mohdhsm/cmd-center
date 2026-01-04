@@ -13,6 +13,7 @@ from ..tools.pipeline_tools import GetOverdueDeals, GetStuckDeals, GetDealDetail
 from ..tools.task_tools import GetTasks, GetOverdueTasks
 from ..tools.employee_tools import GetEmployees, GetEmployeeDetails
 from ..tools.financial_tools import GetCashflowProjection, GetCEODashboard
+from ..tools.email_tools import SearchEmails, GetEmails
 from ..observability.metrics import MetricsTracker, get_metrics_tracker
 from .prompts import build_system_prompt
 
@@ -70,6 +71,10 @@ class OmniousAgent:
         # Financial tools
         self.tools.register(GetCashflowProjection())
         self.tools.register(GetCEODashboard())
+
+        # Email tools
+        self.tools.register(SearchEmails())
+        self.tools.register(GetEmails())
 
     def _build_messages(self, user_message: str) -> List[Dict[str, Any]]:
         """Build messages array for API call.
