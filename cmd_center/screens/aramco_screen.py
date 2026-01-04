@@ -15,6 +15,7 @@ from .stuck_summary_modal import StuckSummaryModal
 from .order_received_summary_modal import OrderReceivedSummaryModal
 from .followup_email_modal import FollowupEmailModal
 from .add_note_modal import AddNoteModal
+from .deal_health_modal import DealHealthModal
 
 
 class AramcoPipelineScreen(Screen):
@@ -438,6 +439,15 @@ class AramcoPipelineScreen(Screen):
 
             modal = AddNoteModal(api_url=self.api_url, deal_id=deal_id)
             self.app.push_screen(modal, lambda result: self.notify("Note added!", severity="information") if result else None)
+        elif event.button.id == "get-summary-button":
+            deal_id = self._get_selected_deal_id()
+            if deal_id is None:
+                self.notify("Select a deal row first.", severity="warning")
+                return
+
+            self.notify("Analyzing deal health...", severity="info")
+            modal = DealHealthModal(api_url=self.api_url, deal_id=deal_id)
+            self.app.push_screen(modal)
 
     async def _show_followup_modal(self, deal_id: int) -> None:
         """Fetch email template and show the modal."""

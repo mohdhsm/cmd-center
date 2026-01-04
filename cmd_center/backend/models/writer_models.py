@@ -131,3 +131,39 @@ class NoteSummaryResult(BaseModel):
     action_items: list[str] = Field(default_factory=list, description="Extracted action items")
     owners: list[str] = Field(default_factory=list, description="Detected owners/assignees")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score 0-1")
+
+
+# ============================================================================
+# DEAL HEALTH ANALYSIS MODELS
+# ============================================================================
+
+class DealHealthContext(BaseModel):
+    """Context for deal health analysis."""
+    deal_id: int = Field(..., description="Deal ID")
+    deal_title: str = Field(..., description="Deal title")
+    stage: str = Field(..., description="Current stage name")
+    stage_code: str = Field(..., description="Stage code (OR, APR, AP, etc.)")
+    days_in_stage: int = Field(..., description="Days in current stage")
+    owner_name: str = Field(..., description="Deal owner name")
+    value_sar: Optional[float] = Field(None, description="Deal value in SAR")
+    notes: list[dict] = Field(default_factory=list, description="Recent notes [{date, author, content}]")
+    stage_history: list[dict] = Field(default_factory=list, description="Stage history [{stage_name, entered_at, duration_hours}]")
+    last_activity_date: Optional[datetime] = Field(None, description="Last activity date")
+    days_since_last_note: Optional[int] = Field(None, description="Days since last note")
+
+
+class DealHealthResult(BaseModel):
+    """Result from deal health analysis."""
+    deal_id: int = Field(default=0, description="Deal ID")
+    health_status: str = Field(..., description="Health status: healthy, at_risk, critical")
+    status_flag: Optional[str] = Field(None, description="Status flag: AT_RISK, DELAYED, PAYMENT_ISSUE, etc.")
+    summary: str = Field(..., description="2-3 sentence executive summary")
+    days_in_stage: int = Field(default=0, description="Days in current stage")
+    stage_threshold_warning: int = Field(default=0, description="Warning threshold for current stage")
+    stage_threshold_critical: int = Field(default=0, description="Critical threshold for current stage")
+    communication_gap_days: Optional[int] = Field(None, description="Days since last communication")
+    communication_assessment: str = Field(default="Unknown", description="Communication assessment")
+    blockers: list[str] = Field(default_factory=list, description="Identified blockers")
+    attribution: str = Field(default="none", description="Delay attribution")
+    recommended_action: str = Field(..., description="Recommended next action")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score 0-1")

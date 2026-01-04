@@ -58,6 +58,7 @@ from .writer_models import (
     ComplianceContext,
     OrderReceivedContext,
     NoteSummaryContext,
+    DealHealthContext,
     # Output results
     DraftEmailResult,
     DraftReminderResult,
@@ -65,6 +66,7 @@ from .writer_models import (
     ComplianceResult,
     OrderReceivedResult,
     NoteSummaryResult,
+    DealHealthResult,
 )
 from .employee_models import (
     # Employee models
@@ -160,12 +162,14 @@ __all__ = [
     "ComplianceContext",
     "OrderReceivedContext",
     "NoteSummaryContext",
+    "DealHealthContext",
     "DraftEmailResult",
     "DraftReminderResult",
     "DealSummaryResult",
     "ComplianceResult",
     "OrderReceivedResult",
     "NoteSummaryResult",
+    "DealHealthResult",
     # Employee Models
     "EmployeeBase",
     "EmployeeCreate",

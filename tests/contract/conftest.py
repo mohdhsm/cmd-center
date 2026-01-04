@@ -281,3 +281,114 @@ def sample_ceo_dashboard_response(
         "last_updated": now.isoformat(),
         "data_freshness": "live",
     }
+
+
+# =============================================================================
+# Deal Health Summary Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def sample_deal_health_context():
+    """Sample deal health context matching DealHealthContext schema."""
+    now = datetime.now(timezone.utc)
+    return {
+        "deal_id": 6670,
+        "deal_title": "Aramco Office Renovation Phase 2",
+        "stage": "Awaiting Payment",
+        "stage_code": "AP",
+        "days_in_stage": 12,
+        "owner_name": "Mohammed",
+        "value_sar": 450000.0,
+        "notes": [
+            {
+                "date": (now - timedelta(days=3)).isoformat(),
+                "author": "Ahmed",
+                "content": "Called client, waiting for payment confirmation"
+            },
+            {
+                "date": (now - timedelta(days=7)).isoformat(),
+                "author": "Mohammed",
+                "content": "Invoice sent to client"
+            },
+        ],
+        "stage_history": [
+            {
+                "stage_name": "Order Received",
+                "entered_at": (now - timedelta(days=30)).isoformat(),
+                "duration_hours": 168.0
+            },
+            {
+                "stage_name": "Approved",
+                "entered_at": (now - timedelta(days=23)).isoformat(),
+                "duration_hours": 120.0
+            },
+            {
+                "stage_name": "Awaiting Payment",
+                "entered_at": (now - timedelta(days=12)).isoformat(),
+                "duration_hours": 288.0
+            },
+        ],
+        "last_activity_date": (now - timedelta(days=3)).isoformat(),
+        "days_since_last_note": 3,
+    }
+
+
+@pytest.fixture
+def sample_deal_health_result():
+    """Sample deal health result matching DealHealthResult schema."""
+    return {
+        "deal_id": 6670,
+        "health_status": "at_risk",
+        "status_flag": "PAYMENT_ISSUE",
+        "summary": "Deal has been in Awaiting Payment stage for 12 days, approaching the 14-day critical threshold. Last communication was 3 days ago.",
+        "days_in_stage": 12,
+        "stage_threshold_warning": 7,
+        "stage_threshold_critical": 14,
+        "communication_gap_days": 3,
+        "communication_assessment": "Healthy",
+        "blockers": ["Payment confirmation pending from client"],
+        "attribution": "customer_delay",
+        "recommended_action": "Follow up with client finance department on payment status. Consider escalating if no response within 48 hours.",
+        "confidence": 0.85,
+    }
+
+
+@pytest.fixture
+def sample_deal_health_result_healthy():
+    """Sample healthy deal result."""
+    return {
+        "deal_id": 1234,
+        "health_status": "healthy",
+        "status_flag": None,
+        "summary": "Deal is progressing well with regular communication and no blockers identified.",
+        "days_in_stage": 5,
+        "stage_threshold_warning": 7,
+        "stage_threshold_critical": 14,
+        "communication_gap_days": 2,
+        "communication_assessment": "Healthy",
+        "blockers": [],
+        "attribution": "none",
+        "recommended_action": "Continue regular follow-ups and monitor progress.",
+        "confidence": 0.92,
+    }
+
+
+@pytest.fixture
+def sample_deal_health_result_critical():
+    """Sample critical deal result."""
+    return {
+        "deal_id": 5555,
+        "health_status": "critical",
+        "status_flag": "SITE_BLOCKED",
+        "summary": "Deal has been stuck in Awaiting Site Readiness for 35 days. Site preparation has been delayed multiple times.",
+        "days_in_stage": 35,
+        "stage_threshold_warning": 14,
+        "stage_threshold_critical": 30,
+        "communication_gap_days": 18,
+        "communication_assessment": "Communication Gap",
+        "blockers": ["Site not ready", "Contractor scheduling conflict", "Missing permits"],
+        "attribution": "site_blocked",
+        "recommended_action": "Escalate to project management immediately. Schedule urgent site visit to assess blockers.",
+        "confidence": 0.78,
+    }

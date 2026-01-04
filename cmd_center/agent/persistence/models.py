@@ -1,6 +1,6 @@
 """SQLModel models for agent conversation persistence."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Any
 from sqlmodel import SQLModel, Field, Relationship
 import json
@@ -13,8 +13,8 @@ class AgentConversation(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     title: str = Field(default="New Conversation")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     messages: List["AgentMessage"] = Relationship(back_populates="conversation")
 
@@ -25,12 +25,12 @@ class AgentMessage(SQLModel, table=True):
     __tablename__ = "agent_messages"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    conversation_id: int = Field(foreign_key="agent_conversations.id")
+    conversation_id: int = Field(foreign_key="agent_conversations.id", index=True)
     role: str = Field(description="user, assistant, or system")
     content: Optional[str] = Field(default=None)
     tool_calls_json: Optional[str] = Field(default=None)
     tool_results_json: Optional[str] = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     conversation: Optional[AgentConversation] = Relationship(back_populates="messages")
 

@@ -25,12 +25,14 @@ from ..models.writer_models import (
     ComplianceContext,
     OrderReceivedContext,
     NoteSummaryContext,
+    DealHealthContext,
     DraftEmailResult,
     DraftReminderResult,
     DealSummaryResult,
     ComplianceResult,
     OrderReceivedResult,
     NoteSummaryResult,
+    DealHealthResult,
 )
 from ..integrations.llm_client import get_llm_client, LLMClient, LLMValidationError, LLMError
 from ..integrations.llm_observability import observe_llm_request, get_observability_logger
@@ -437,6 +439,72 @@ class WriterService:
             raise
 
     # ========================================================================
+    # DEAL HEALTH ANALYSIS
+    # ========================================================================
+
+    async def analyze_deal_health(self, context: DealHealthContext) -> DealHealthResult:
+        """Analyze deal health and provide actionable insights.
+
+        Args:
+            context: Deal health analysis context
+
+        Returns:
+            DealHealthResult with status, blockers, and recommendations
+
+        Raises:
+            LLMError: On LLM failures
+        """
+        try:
+            # Render prompt
+            system_prompt, user_prompt = self.prompts.render_prompt(
+                "deal.health_analysis.v1",
+                {
+                    "deal_id": context.deal_id,
+                    "deal_title": context.deal_title,
+                    "stage": context.stage,
+                    "stage_code": context.stage_code,
+                    "days_in_stage": context.days_in_stage,
+                    "owner_name": context.owner_name,
+                    "value_sar": context.value_sar,
+                    "days_since_last_note": context.days_since_last_note,
+                    "stage_history": context.stage_history,
+                    "notes": context.notes,
+                }
+            )
+
+            # Get config
+            config = self.prompts.get_prompt_config("deal.health_analysis.v1")
+
+            # Call LLM
+            result = await self.llm.generate_structured_completion(
+                schema=DealHealthResult,
+                prompt=user_prompt,
+                system_prompt=system_prompt,
+                max_tokens=config["max_tokens"],
+                temperature=config["temperature"],
+                fallback_on_validation_error=True,
+            )
+
+            # Set deal_id and days_in_stage from context
+            result.deal_id = context.deal_id
+            result.days_in_stage = context.days_in_stage
+
+            logger.info(
+                f"Successfully analyzed health for deal {context.deal_id}",
+                extra={"health_status": result.health_status, "confidence": result.confidence}
+            )
+
+            return result
+
+        except LLMValidationError as e:
+            logger.error(f"Failed to parse health analysis for deal {context.deal_id}: {e}")
+            return self._deal_health_fallback(context, str(e))
+
+        except LLMError as e:
+            logger.error(f"LLM error during deal health analysis: {e}")
+            raise
+
+    # ========================================================================
     # BATCH OPERATIONS
     # ========================================================================
 
@@ -552,6 +620,21 @@ class WriterService:
         """Provide fallback note summary when LLM fails."""
         return NoteSummaryResult(
             summary=f"Summary of {len(context.notes)} notes unavailable due to error",
+            confidence=0.0,
+        )
+
+    def _deal_health_fallback(self, context: DealHealthContext, error: str) -> DealHealthResult:
+        """Provide fallback deal health result when LLM fails."""
+        return DealHealthResult(
+            deal_id=context.deal_id,
+            health_status="unknown",
+            summary=f"Unable to analyze deal health - LLM error: {error}",
+            days_in_stage=context.days_in_stage,
+            stage_threshold_warning=0,
+            stage_threshold_critical=0,
+            communication_assessment="Unknown",
+            attribution="none",
+            recommended_action="Manual review required",
             confidence=0.0,
         )
 

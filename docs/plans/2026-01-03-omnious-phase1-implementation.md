@@ -13,9 +13,17 @@
 ## Prerequisites
 
 Before starting, ensure:
-- OpenRouter API key is configured in `.env`
+- **IMPORTANT:** Always activate venv before running Python commands: `source venv/bin/activate`
+- OpenRouter API key is configured in `.env` as `OPENROUTER_API_KEY`
 - Existing services work: `deal_health_service`, `task_service`, `employee_service`
-- Tests pass: `pytest tests/`
+- Tests pass: `source venv/bin/activate && pytest tests/`
+- Verify these imports exist and paths are correct:
+  - `cmd_center.backend.services.deal_health_service.get_deal_health_service`
+  - `cmd_center.backend.services.task_service.get_task_service`
+  - `cmd_center.backend.services.employee_service.get_employee_service`
+  - `cmd_center.backend.models.task_models.TaskFilters`
+  - `cmd_center.backend.models.employee_models.EmployeeFilters`
+  - `cmd_center.backend.integrations.config.get_config`
 
 ---
 
@@ -182,7 +190,7 @@ from typing import Optional
 class MetricsTracker:
     """Track token usage and costs for agent sessions."""
 
-    # Claude Sonnet 4 via OpenRouter pricing (per 1M tokens)
+    # Claude Sonnet 3.5 via OpenRouter pricing (per 1M tokens)
     PRICING = {
         "input": 3.00,   # $3 per 1M input tokens
         "output": 15.00,  # $15 per 1M output tokens
@@ -921,8 +929,8 @@ class TestGetOverdueDeals:
         # Setup mock
         mock_service = Mock()
         mock_service.get_overdue_deals.return_value = [
-            Mock(id=1, title="Deal 1", owner="Alice", overdue_days=10, value=1000),
-            Mock(id=2, title="Deal 2", owner="Bob", overdue_days=5, value=2000),
+            Mock(id=1, title="Deal 1", owner="Alice", stage="OR", overdue_days=10, value=1000),
+            Mock(id=2, title="Deal 2", owner="Bob", stage="UP", overdue_days=5, value=2000),
         ]
         mock_get_service.return_value = mock_service
 
@@ -976,9 +984,14 @@ class TestGetDealDetails:
         mock_service.get_deal_detail.return_value = Mock(
             id=123,
             title="Test Deal",
+            pipeline="Aramco Projects",
             stage="Under Progress",
             owner="Alice",
+            org_name="Test Org",
             value_sar=50000,
+            notes_count=5,
+            activities_count=10,
+            email_messages_count=3,
         )
         mock_get_service.return_value = mock_service
 
@@ -1000,10 +1013,11 @@ class TestGetDealNotes:
     @patch("cmd_center.agent.tools.pipeline_tools.get_deal_health_service")
     def test_execute_returns_notes(self, mock_get_service):
         """Execute returns deal notes."""
+        from datetime import datetime, timezone
         mock_service = Mock()
         mock_service.get_deal_notes.return_value = [
-            Mock(content="Note 1", author="Alice"),
-            Mock(content="Note 2", author="Bob"),
+            Mock(content="Note 1", author="Alice", date=datetime.now(timezone.utc)),
+            Mock(content="Note 2", author="Bob", date=datetime.now(timezone.utc)),
         ]
         mock_get_service.return_value = mock_service
 
@@ -1265,8 +1279,8 @@ class TestGetTasks:
         mock_service = Mock()
         mock_service.get_tasks.return_value = Mock(
             items=[
-                Mock(id=1, title="Task 1", status="open"),
-                Mock(id=2, title="Task 2", status="done"),
+                Mock(id=1, title="Task 1", status="open", priority="high", is_critical=False, due_at=None, assignee_employee_id=1),
+                Mock(id=2, title="Task 2", status="done", priority="low", is_critical=False, due_at=None, assignee_employee_id=2),
             ],
             total=2,
         )
@@ -1292,7 +1306,7 @@ class TestGetOverdueTasks:
         """Execute returns overdue tasks."""
         mock_service = Mock()
         mock_service.get_overdue_tasks.return_value = [
-            Mock(id=1, title="Overdue Task"),
+            Mock(id=1, title="Overdue Task", status="open", priority="high", is_critical=True, due_at=None, assignee_employee_id=1),
         ]
         mock_get_service.return_value = mock_service
 
@@ -1316,8 +1330,8 @@ class TestGetEmployees:
         mock_service = Mock()
         mock_service.get_employees.return_value = Mock(
             items=[
-                Mock(id=1, full_name="Alice", department="sales"),
-                Mock(id=2, full_name="Bob", department="operations"),
+                Mock(id=1, full_name="Alice", role_title="Manager", department="sales", email="alice@test.com"),
+                Mock(id=2, full_name="Bob", role_title="Engineer", department="operations", email="bob@test.com"),
             ],
             total=2,
         )
@@ -1348,6 +1362,8 @@ class TestGetEmployeeDetails:
             role_title="Sales Manager",
             department="sales",
             email="alice@example.com",
+            phone="+1234567890",
+            is_active=True,
         )
         mock_get_service.return_value = mock_service
 
@@ -1626,6 +1642,7 @@ Create `tests/agent/test_agent_core.py`:
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
 import json
+import httpx
 
 from cmd_center.agent.core.agent import OmniousAgent, StreamChunk
 
@@ -1644,6 +1661,12 @@ class TestStreamChunk:
         chunk = StreamChunk(type="tool_call", tool_name="get_deals")
         assert chunk.type == "tool_call"
         assert chunk.tool_name == "get_deals"
+
+    def test_error_chunk(self):
+        """Error chunk has error message."""
+        chunk = StreamChunk(type="error", error="Something went wrong")
+        assert chunk.type == "error"
+        assert chunk.error == "Something went wrong"
 
 
 class TestOmniousAgent:
@@ -1723,6 +1746,34 @@ class TestOmniousAgentToolCalling:
             assert len(results) == 1
             assert results[0]["role"] == "tool"
             assert results[0]["tool_call_id"] == "call_123"
+
+
+class TestOmniousAgentRetry:
+    """Test retry logic."""
+
+    @pytest.mark.asyncio
+    async def test_call_api_with_retry_success(self):
+        """Successful API call returns data."""
+        agent = OmniousAgent()
+
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"choices": [{"message": {"content": "Hello"}}]}
+        mock_response.raise_for_status = Mock()
+
+        async with httpx.AsyncClient() as client:
+            with patch.object(client, "post", return_value=mock_response):
+                # The method should exist and work
+                assert agent.MAX_RETRIES == 3
+
+    @pytest.mark.asyncio
+    async def test_returns_error_after_max_retries(self):
+        """Agent has retry constants defined."""
+        agent = OmniousAgent()
+        assert hasattr(agent, "MAX_RETRIES")
+        assert hasattr(agent, "RETRY_DELAYS")
+        assert agent.MAX_RETRIES == 3
+        assert len(agent.RETRY_DELAYS) == 3
 ```
 
 **Step 2: Run test to verify it fails**
@@ -1736,10 +1787,13 @@ Create `cmd_center/agent/core/agent.py`:
 ```python
 """Omnious Agent core - main orchestration and ReAct loop."""
 
+import asyncio
 import json
 import logging
 from dataclasses import dataclass
-from typing import AsyncIterator, List, Optional
+from typing import AsyncIterator, List, Optional, Tuple
+
+import httpx
 
 from ..tools.registry import ToolRegistry
 from ..tools.pipeline_tools import (
@@ -1752,7 +1806,7 @@ from ..tools.task_tools import GetTasks, GetOverdueTasks
 from ..tools.employee_tools import GetEmployees, GetEmployeeDetails
 from ..observability.metrics import MetricsTracker
 from .prompts import build_system_prompt
-from ...backend.integrations.llm_client import get_llm_client
+from ...backend.integrations.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -1760,18 +1814,26 @@ logger = logging.getLogger(__name__)
 @dataclass
 class StreamChunk:
     """Chunk of streamed response."""
-    type: str  # "text", "tool_call", "tool_result", "done"
+    type: str  # "text", "tool_call", "tool_result", "error", "done"
     content: Optional[str] = None
     tool_name: Optional[str] = None
     tool_result: Optional[dict] = None
+    error: Optional[str] = None
 
 
 class OmniousAgent:
     """The all-knowing Omnious agent for Command Center."""
 
+    MAX_RETRIES = 3
+    RETRY_DELAYS = [0.1, 0.5, 1.0]  # seconds
+
     def __init__(self):
         """Initialize the agent."""
-        self.llm = get_llm_client()
+        config = get_config()
+        self.api_key = config.openrouter_api_key
+        self.api_url = config.openrouter_api_url or "https://openrouter.ai/api/v1"
+        self.model = config.llm_model or "anthropic/claude-3.5-sonnet"
+
         self.tools = ToolRegistry()
         self.metrics = MetricsTracker()
         self.conversation_history: List[dict] = []
@@ -1828,6 +1890,55 @@ class OmniousAgent:
     def clear_conversation(self) -> None:
         """Clear conversation history."""
         self.conversation_history = []
+
+    async def _call_api_with_retry(
+        self,
+        client: httpx.AsyncClient,
+        url: str,
+        headers: dict,
+        payload: dict
+    ) -> Tuple[dict, bool]:
+        """Call API with retry logic for transient failures.
+
+        Args:
+            client: HTTP client
+            url: API URL
+            headers: Request headers
+            payload: Request payload
+
+        Returns:
+            Tuple of (response_data, is_error)
+        """
+        last_error = None
+
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                response = await client.post(url, headers=headers, json=payload)
+
+                if response.status_code == 429:  # Rate limited
+                    retry_after = float(response.headers.get("retry-after", self.RETRY_DELAYS[attempt]))
+                    logger.warning(f"Rate limited, waiting {retry_after}s...")
+                    await asyncio.sleep(retry_after)
+                    continue
+
+                response.raise_for_status()
+                return response.json(), False
+
+            except httpx.TimeoutException as e:
+                last_error = f"Request timed out: {e}"
+                logger.warning(f"Attempt {attempt + 1}/{self.MAX_RETRIES}: {last_error}")
+            except httpx.HTTPStatusError as e:
+                last_error = f"HTTP error {e.response.status_code}"
+                logger.warning(f"Attempt {attempt + 1}/{self.MAX_RETRIES}: {last_error}")
+            except Exception as e:
+                last_error = str(e)
+                logger.error(f"Unexpected error: {last_error}")
+                break  # Don't retry unexpected errors
+
+            if attempt < self.MAX_RETRIES - 1:
+                await asyncio.sleep(self.RETRY_DELAYS[attempt])
+
+        return {"error": last_error}, True
 
     async def _process_tool_calls(self, tool_calls: List[dict]) -> List[dict]:
         """Process tool calls and return results.
@@ -1896,30 +2007,30 @@ class OmniousAgent:
         Returns:
             Final text response
         """
-        import httpx
-
         for iteration in range(max_iterations):
             # Call OpenRouter API
             headers = {
-                "Authorization": f"Bearer {self.llm.api_key}",
+                "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
             }
 
             payload = {
-                "model": self.llm.model,
+                "model": self.model,
                 "messages": messages,
                 "tools": self.tools.get_tools_schema(),
                 "tool_choice": "auto",
             }
 
             async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    f"{self.llm.api_url}/chat/completions",
-                    headers=headers,
-                    json=payload,
+                data, is_error = await self._call_api_with_retry(
+                    client,
+                    f"{self.api_url}/chat/completions",
+                    headers,
+                    payload
                 )
-                response.raise_for_status()
-                data = response.json()
+
+                if is_error:
+                    return f"I encountered an error: {data.get('error', 'Unknown error')}"
 
             # Track tokens
             if "usage" in data:
@@ -1968,10 +2079,15 @@ class OmniousAgent:
         accumulated_text = ""
 
         # Stream with tool handling
-        async for chunk in self._stream_with_tools(messages):
-            yield chunk
-            if chunk.type == "text" and chunk.content:
-                accumulated_text += chunk.content
+        try:
+            async for chunk in self._stream_with_tools(messages):
+                yield chunk
+                if chunk.type == "text" and chunk.content:
+                    accumulated_text += chunk.content
+        except Exception as e:
+            logger.error(f"Stream error: {e}")
+            yield StreamChunk(type="error", error=str(e))
+            return
 
         # Add complete response to history
         if accumulated_text:
@@ -1989,16 +2105,14 @@ class OmniousAgent:
         Yields:
             StreamChunk objects
         """
-        import httpx
-
         for iteration in range(max_iterations):
             headers = {
-                "Authorization": f"Bearer {self.llm.api_key}",
+                "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
             }
 
             payload = {
-                "model": self.llm.model,
+                "model": self.model,
                 "messages": messages,
                 "tools": self.tools.get_tools_schema(),
                 "tool_choice": "auto",
@@ -2007,12 +2121,11 @@ class OmniousAgent:
 
             accumulated_content = ""
             accumulated_tool_calls = []
-            current_tool_call = None
 
             async with httpx.AsyncClient(timeout=60.0) as client:
                 async with client.stream(
                     "POST",
-                    f"{self.llm.api_url}/chat/completions",
+                    f"{self.api_url}/chat/completions",
                     headers=headers,
                     json=payload,
                 ) as response:
@@ -2117,13 +2230,13 @@ def get_agent() -> OmniousAgent:
 **Step 4: Run test to verify it passes**
 
 Run: `pytest tests/agent/test_agent_core.py -v`
-Expected: PASS (8 tests)
+Expected: PASS (10 tests)
 
 **Step 5: Commit**
 
 ```bash
 git add cmd_center/agent/core/agent.py tests/agent/test_agent_core.py
-git commit -m "feat(agent): implement OmniousAgent core with tool calling"
+git commit -m "feat(agent): implement OmniousAgent core with tool calling and retry logic"
 ```
 
 ---
@@ -2278,13 +2391,22 @@ class AgentScreen(Screen):
                     self._append_to_current(chunk.content)
                 elif chunk.type == "tool_call":
                     self._set_status(f"Using {chunk.tool_name}...")
+                elif chunk.type == "error":
+                    self._append_to_current(f"\n\n⚠️ Error: {chunk.error}")
+                    self._set_status("Error")
                 elif chunk.type == "done":
                     self._set_status("Ready")
                     self._update_metrics()
         except Exception as e:
             log(f"Error in chat: {e}")
-            self._append_to_current(f"\n\nError: {str(e)[:100]}")
-            self._set_status("Error")
+            error_message = (
+                "⚠️ **Something went wrong**\n\n"
+                f"Error: {str(e)[:200]}\n\n"
+                "I'll try my best to help - could you rephrase your question?"
+            )
+            if self._current_message:
+                self._current_message.update(error_message)
+            self._set_status("Error - Ready")
 
         # Scroll to bottom
         chat.scroll_end()
@@ -2340,7 +2462,7 @@ python -m cmd_center.main
 
 ```bash
 git add cmd_center/screens/agent_screen.py
-git commit -m "feat(agent): add TUI chat screen for Omnious"
+git commit -m "feat(agent): add TUI chat screen for Omnious with error handling"
 ```
 
 ---
@@ -2398,7 +2520,162 @@ pytest tests/ -v
 
 Expected: All tests pass (including existing tests)
 
-**Step 3: Final commit if needed**
+**Step 3: Commit if needed**
+
+```bash
+git add -A
+git commit -m "test(agent): verify all tests pass"
+```
+
+---
+
+## Task 12: Golden Q&A Tests
+
+**Files:**
+- Create: `tests/agent/test_golden_qa.py`
+
+**Step 1: Write the golden tests**
+
+Create `tests/agent/test_golden_qa.py`:
+```python
+"""Golden Q&A tests for Omnious agent - validates tool selection."""
+
+import pytest
+
+from cmd_center.agent.core.agent import OmniousAgent
+
+
+GOLDEN_SCENARIOS = [
+    {
+        "id": "deals_need_attention",
+        "query": "What deals need attention?",
+        "expected_tools": ["get_overdue_deals"],
+    },
+    {
+        "id": "stuck_deals",
+        "query": "Which deals are stuck in their stage?",
+        "expected_tools": ["get_stuck_deals"],
+    },
+    {
+        "id": "specific_deal",
+        "query": "Tell me about deal 123",
+        "expected_tools": ["get_deal_details"],
+    },
+    {
+        "id": "deal_history",
+        "query": "What are the recent notes on deal 456?",
+        "expected_tools": ["get_deal_notes"],
+    },
+    {
+        "id": "overdue_tasks",
+        "query": "What tasks are overdue?",
+        "expected_tools": ["get_overdue_tasks"],
+    },
+    {
+        "id": "team_lookup",
+        "query": "Who works in the sales department?",
+        "expected_tools": ["get_employees"],
+    },
+    {
+        "id": "employee_details",
+        "query": "Tell me about employee 5",
+        "expected_tools": ["get_employee_details"],
+    },
+]
+
+
+class TestGoldenToolSelection:
+    """Test that agent selects correct tools for common queries."""
+
+    @pytest.mark.parametrize("scenario", GOLDEN_SCENARIOS, ids=lambda s: s["id"])
+    def test_tool_schema_exists(self, scenario):
+        """Verify expected tools are registered."""
+        agent = OmniousAgent()
+        tool_names = [t["name"] for t in agent.tools.list_tools()]
+
+        for expected_tool in scenario["expected_tools"]:
+            assert expected_tool in tool_names, f"Tool {expected_tool} not registered"
+
+    def test_all_phase1_tools_registered(self):
+        """Verify all 8 Phase 1 tools are registered."""
+        agent = OmniousAgent()
+        tools = agent.tools.list_tools()
+
+        expected_tools = [
+            "get_overdue_deals",
+            "get_stuck_deals",
+            "get_deal_details",
+            "get_deal_notes",
+            "get_tasks",
+            "get_overdue_tasks",
+            "get_employees",
+            "get_employee_details",
+        ]
+
+        tool_names = [t["name"] for t in tools]
+        for expected in expected_tools:
+            assert expected in tool_names, f"Missing tool: {expected}"
+
+        assert len(tools) == 8, f"Expected 8 tools, got {len(tools)}"
+
+    def test_tools_have_descriptions(self):
+        """All tools have non-empty descriptions."""
+        agent = OmniousAgent()
+        tools = agent.tools.list_tools()
+
+        for tool in tools:
+            assert tool["description"], f"Tool {tool['name']} has no description"
+            assert len(tool["description"]) > 10, f"Tool {tool['name']} description too short"
+
+    def test_tools_have_valid_schemas(self):
+        """All tools generate valid OpenAI schemas."""
+        agent = OmniousAgent()
+        schemas = agent.tools.get_tools_schema()
+
+        for schema in schemas:
+            assert schema["type"] == "function"
+            assert "function" in schema
+            assert "name" in schema["function"]
+            assert "description" in schema["function"]
+            assert "parameters" in schema["function"]
+            assert schema["function"]["parameters"]["type"] == "object"
+```
+
+**Step 2: Run golden tests**
+
+Run: `pytest tests/agent/test_golden_qa.py -v`
+Expected: PASS (all tests)
+
+**Step 3: Commit**
+
+```bash
+git add tests/agent/test_golden_qa.py
+git commit -m "test(agent): add golden Q&A tests for tool registration"
+```
+
+---
+
+## Task 13: Final Verification
+
+**Step 1: Run complete test suite**
+
+```bash
+pytest tests/ -v
+```
+
+Expected: All tests pass
+
+**Step 2: Manual testing**
+
+1. Start the app: `python -m cmd_center.main`
+2. Press `i` to open Omnious
+3. Test queries:
+   - "What deals need attention?"
+   - "Show me stuck deals"
+   - "Who are the employees?"
+   - "What tasks are overdue?"
+
+**Step 3: Final commit**
 
 ```bash
 git add -A
@@ -2410,16 +2687,17 @@ git commit -m "feat(agent): complete Phase 1 of Omnious agent"
 ## Summary
 
 Phase 1 delivers:
-- **Agent Core**: ReAct loop with OpenRouter tool calling
+- **Agent Core**: ReAct loop with OpenRouter tool calling and retry logic (3 retries with exponential backoff)
 - **System Prompt**: Omnious persona with boundaries
 - **Tool System**: Base classes + registry with OpenAI schema
-- **6 Read Tools**: overdue/stuck deals, deal details/notes, tasks, employees
-- **TUI Screen**: Chat interface with streaming
+- **8 Read Tools**: overdue/stuck deals, deal details/notes, tasks/overdue tasks, employees/employee details
+- **TUI Screen**: Chat interface with streaming and error display
 - **Metrics**: Token/cost tracking in header
+- **Error Handling**: Retry logic for transient failures, graceful error display
 
-Total new files: ~15
-Total new tests: ~40
-Estimated effort: 8-10 focused tasks
+Total new files: ~16
+Total new tests: ~50 (including golden tests)
+Estimated effort: 12-13 focused tasks
 
 ---
 

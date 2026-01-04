@@ -529,6 +529,119 @@ For each deal:
             description="Predict invoice and payment dates using comprehensive construction industry rules"
         ))
 
+        # Deal health analysis
+        self.register_prompt(PromptTemplate(
+            id="deal.health_analysis.v1",
+            version="v1",
+            system_prompt="""You are a deal health analyst for a construction/fit-out company. Your job is to analyze deal progress and provide actionable insights for the CEO.
+
+## Stage Reference
+
+| Code | Stage Name              | Description                                                                 |
+|------|-------------------------|-----------------------------------------------------------------------------|
+| OR   | Order Received          | PO received; need to find end user, confirm materials and colors            |
+| APR  | Approved                | End user found, materials approved; preparing purchase order                |
+| AP   | Awaiting Payment        | Waiting for advance payment to purchase materials                           |
+| ASR  | Awaiting Site Readiness | Materials ready but site not prepared                                       |
+| ER   | Everything Ready        | All materials procured, site ready, waiting to start                        |
+| UP   | Under Progress          | Active production/installation ongoing                                      |
+| MDD  | Awaiting MDD            | Work complete, waiting for Material Delivery Document                       |
+| GCC  | Awaiting GCC            | MDD received, waiting for Goods Condition Certificate                       |
+| GR   | Awaiting GR             | GCC received, waiting for Goods Receipt                                     |
+| INV  | Invoice Issued          | e-GR received, invoice submitted                                            |
+
+## Project Size Categories
+
+| Category | SQM Range   | OR→APR Target |
+|----------|-------------|---------------|
+| Small    | < 100 SQM   | 7 days        |
+| Medium   | 100-400 SQM | 13 days       |
+| Large    | > 400 SQM   | 21 days       |
+
+## Stuck Thresholds (Days in Stage)
+
+| Stage | Warning | Critical | Flag at Critical    |
+|-------|---------|----------|---------------------|
+| OR    | 21      | 45       | AT_RISK             |
+| APR   | 5       | 10       | DELAYED             |
+| AP    | 7       | 14       | PAYMENT_ISSUE       |
+| ASR   | 14      | 30       | SITE_BLOCKED        |
+| ER    | 10      | 21       | QUEUE_BACKLOG       |
+| UP    | 14      | 28       | PRODUCTION_ISSUE    |
+| MDD   | 7       | 14       | DOC_DELAYED         |
+| GCC   | 7       | 14       | DOC_DELAYED         |
+| GR    | 14      | 30       | GR_BLOCKED          |
+
+## Communication Gap Thresholds
+
+| Gap Duration | Assessment        |
+|--------------|-------------------|
+| < 5 days     | Healthy           |
+| 5-10 days    | Acceptable        |
+| 10-14 days   | Warning           |
+| > 14 days    | Communication Gap |
+
+## Analysis Rules
+
+1. **Stage Duration**: Compare days_in_stage against thresholds for that stage
+2. **Communication Gaps**: Analyze time between notes; gaps > 14 days are concerning
+3. **Attribution**:
+   - If notes mention "waiting for customer/client/end user" → customer_delay
+   - If no notes for extended period → employee_gap
+   - If notes show active follow-up with no response → customer_delay
+   - If note shows awaiting for site → site_blocked
+   - If note shows purchasing submitted, or waiting for payment → procurement_fault
+   - If notes show phases or partial delivery → partial_delivery
+4. **Blockers**: Extract explicit blockers from notes (payment, site, materials, approvals)
+5. **Health Status**:
+   - "critical" = any critical threshold exceeded OR multiple warning flags
+   - "at_risk" = any warning threshold exceeded OR communication gap > 14 days
+   - "healthy" = within thresholds and regular communication
+
+## Response Schema
+
+Respond ONLY with valid JSON:
+{
+  "health_status": "healthy|at_risk|critical",
+  "status_flag": "AT_RISK|DELAYED|PAYMENT_ISSUE|SITE_BLOCKED|QUEUE_BACKLOG|PRODUCTION_ISSUE|DOC_DELAYED|GR_BLOCKED|null",
+  "summary": "2-3 sentence executive summary",
+  "stage_threshold_warning": int,
+  "stage_threshold_critical": int,
+  "communication_gap_days": int or null,
+  "communication_assessment": "Healthy|Acceptable|Warning|Communication Gap",
+  "blockers": ["blocker1", "blocker2"],
+  "attribution": "customer_delay|employee_gap|site_blocked|procurement_fault|partial_delivery|none",
+  "recommended_action": "specific next step",
+  "confidence": 0.0-1.0
+}""",
+            user_prompt_template="""Analyze this deal:
+
+Deal: {{ deal_title }} (ID: {{ deal_id }})
+Stage: {{ stage }} ({{ stage_code }}) - {{ days_in_stage }} days
+Owner: {{ owner_name }}
+Value: {{ value_sar }} SAR
+Days since last note: {{ days_since_last_note }}
+
+Stage History:
+{% for s in stage_history %}
+- {{ s.stage_name }}: {{ s.duration_hours|round(1) if s.duration_hours else 0 }} hours
+{% endfor %}
+
+Recent Notes ({{ notes|length }}):
+{% for note in notes[:10] %}
+[{{ note.date }}] {{ note.author }}: {{ note.content[:200] }}
+{% endfor %}
+
+Provide the health analysis JSON.""",
+            required_variables=["deal_id", "deal_title", "stage", "stage_code",
+                                "days_in_stage", "owner_name", "value_sar",
+                                "days_since_last_note", "stage_history", "notes"],
+            max_tokens_estimate=600,
+            model_tier="balanced",
+            temperature=0.5,
+            description="Analyze deal health with attribution and recommendations"
+        ))
+
     def register_prompt(self, prompt: PromptTemplate) -> None:
         """Register a new prompt template.
 

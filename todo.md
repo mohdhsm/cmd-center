@@ -20,7 +20,8 @@
 - [ ] create the send remindre functionality using email.
 - [ ] fix the logs issues, when adding logs its not appearing. 
 - [ ] Check the database items to see what is happening. 
-
+- [ ] fix the HTML in the deal notes area, whether we parse it or not. 
+- [ ] fix the copy and paste issue
 
 -
 ### Done

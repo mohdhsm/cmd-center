@@ -20,7 +20,7 @@ class AddNoteModal(ModalScreen):
 
     #note-modal {
         width: 80;
-        height: 28;
+        height: 36;
         border: thick $primary;
         background: $surface;
         padding: 1;

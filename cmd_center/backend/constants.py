@@ -181,6 +181,10 @@ class ActionType(str, Enum):
     SKILL_RATING_CREATED = "skill_rating_created"
     SKILL_RATED = "skill_rated"
 
+    # Deal actions
+    DEAL_UPDATED = "deal_updated"
+    DEAL_NOTE_ADDED = "deal_note_added"
+
     # System/Loop actions
     LOOP_FINDING = "loop_finding"
     SYNC_COMPLETED = "sync_completed"
