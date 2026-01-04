@@ -6,7 +6,9 @@ from pydantic import BaseModel, Field
 from .base import BaseTool, ToolResult
 from ...backend.services.task_service import get_task_service
 from ...backend.services.reminder_service import get_reminder_service
+from ...backend.services.note_service import get_note_service
 from ...backend.models.task_models import TaskFilters
+from ...backend.models.note_models import NoteFilters
 
 
 class GetTasksParams(BaseModel):
@@ -157,6 +159,76 @@ class GetPendingReminders(BaseTool):
                 data={
                     "reminders": reminders_data,
                     "count": len(reminders_data),
+                }
+            )
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+
+
+class GetNotesParams(BaseModel):
+    """Parameters for get_notes tool."""
+    target_type: Optional[str] = Field(
+        default=None,
+        description="Filter by target type (e.g., 'deal', 'task', 'employee')"
+    )
+    target_id: Optional[int] = Field(
+        default=None,
+        description="Filter by target ID (requires target_type)"
+    )
+    pinned: Optional[bool] = Field(
+        default=None,
+        description="Filter for pinned notes only"
+    )
+    search: Optional[str] = Field(
+        default=None,
+        description="Search text within note content"
+    )
+    page_size: int = Field(
+        default=20,
+        description="Maximum number of notes to return"
+    )
+
+
+class GetNotes(BaseTool):
+    """Get notes with optional filters."""
+
+    name = "get_notes"
+    description = "Get notes from the system, optionally filtered by target entity or search text. Use to review history, context, and important information."
+    parameters_model = GetNotesParams
+
+    def execute(self, params: GetNotesParams) -> ToolResult:
+        """Execute the tool."""
+        try:
+            service = get_note_service()
+            filters = NoteFilters(
+                target_type=params.target_type,
+                target_id=params.target_id,
+                pinned=params.pinned,
+                search=params.search,
+                page_size=params.page_size,
+            )
+            result = service.get_notes(filters)
+
+            notes_data = [
+                {
+                    "id": n.id,
+                    "content": n.content[:500] if n.content and len(n.content) > 500 else n.content,
+                    "created_by": n.created_by,
+                    "target_type": n.target_type,
+                    "target_id": n.target_id,
+                    "pinned": n.pinned,
+                    "tags": n.tags,
+                    "created_at": n.created_at.isoformat() if n.created_at else None,
+                }
+                for n in result.items
+            ]
+
+            return ToolResult(
+                success=True,
+                data={
+                    "notes": notes_data,
+                    "count": len(notes_data),
+                    "total": result.total,
                 }
             )
         except Exception as e:

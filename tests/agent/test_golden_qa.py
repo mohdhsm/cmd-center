@@ -70,6 +70,7 @@ class TestGoldenToolSelection:
             "get_tasks",
             "get_overdue_tasks",
             "get_pending_reminders",
+            "get_notes",
             "get_employees",
             "get_employee_details",
             "get_employee_skills",
@@ -90,7 +91,7 @@ class TestGoldenToolSelection:
         for expected in expected_tools:
             assert expected in tool_names, f"Missing tool: {expected}"
 
-        assert len(tools) == 17, f"Expected 17 tools, got {len(tools)}"
+        assert len(tools) == 18, f"Expected 18 tools, got {len(tools)}"
 
     def test_tools_have_descriptions(self):
         """All tools have non-empty descriptions."""

@@ -10,7 +10,7 @@ import httpx
 from ...backend.integrations.config import get_config
 from ..tools.registry import ToolRegistry
 from ..tools.pipeline_tools import GetOverdueDeals, GetStuckDeals, GetDealDetails, GetDealNotes
-from ..tools.task_tools import GetTasks, GetOverdueTasks, GetPendingReminders
+from ..tools.task_tools import GetTasks, GetOverdueTasks, GetPendingReminders, GetNotes
 from ..tools.employee_tools import GetEmployees, GetEmployeeDetails, GetEmployeeSkills, GetOwnerKPIs
 from ..tools.financial_tools import GetCashflowProjection, GetCEODashboard
 from ..tools.email_tools import SearchEmails, GetEmails
@@ -66,6 +66,7 @@ class OmniousAgent:
         self.tools.register(GetTasks())
         self.tools.register(GetOverdueTasks())
         self.tools.register(GetPendingReminders())
+        self.tools.register(GetNotes())
 
         # Employee tools
         self.tools.register(GetEmployees())
