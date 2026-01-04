@@ -5,6 +5,9 @@ from typing import Optional
 
 from sqlmodel import SQLModel, Field, create_engine, Index
 
+# Import agent persistence models so they're registered with SQLModel.metadata
+from cmd_center.agent.persistence.models import AgentConversation, AgentMessage
+
 # SQLite cache file; adjust path if needed
 engine = create_engine("sqlite:///pipedrive_cache.db", echo=False, connect_args={"check_same_thread": False})
 
@@ -782,4 +785,7 @@ __all__ = [
     "CachedEmail",
     "CachedEmailAttachment",
     "CachedMailFolder",
+    # Agent Persistence tables
+    "AgentConversation",
+    "AgentMessage",
 ]
