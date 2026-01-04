@@ -56,12 +56,13 @@ class TestGoldenToolSelection:
         for expected_tool in scenario["expected_tools"]:
             assert expected_tool in tool_names, f"Tool {expected_tool} not registered"
 
-    def test_all_phase1_tools_registered(self):
-        """Verify all 8 Phase 1 tools are registered."""
+    def test_all_tools_registered(self):
+        """Verify all Phase 1 and Phase 2 tools are registered."""
         agent = OmniousAgent()
         tools = agent.tools.list_tools()
 
         expected_tools = [
+            # Phase 1 tools
             "get_overdue_deals",
             "get_stuck_deals",
             "get_deal_details",
@@ -70,13 +71,15 @@ class TestGoldenToolSelection:
             "get_overdue_tasks",
             "get_employees",
             "get_employee_details",
+            # Phase 2 tools
+            "get_cashflow_projection",
         ]
 
         tool_names = [t["name"] for t in tools]
         for expected in expected_tools:
             assert expected in tool_names, f"Missing tool: {expected}"
 
-        assert len(tools) == 8, f"Expected 8 tools, got {len(tools)}"
+        assert len(tools) == 9, f"Expected 9 tools, got {len(tools)}"
 
     def test_tools_have_descriptions(self):
         """All tools have non-empty descriptions."""
