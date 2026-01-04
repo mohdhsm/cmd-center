@@ -341,6 +341,16 @@ class OmniousAgent:
             # Execute the tool
             result = self.tools.execute(tool_name, arguments)
 
+            # Check if tool returned a pending action
+            if result.success and isinstance(result.data, dict):
+                if "pending_action" in result.data:
+                    pa_data = result.data["pending_action"]
+                    self.pending_action = PendingAction(
+                        tool_name=pa_data["tool_name"],
+                        preview=pa_data["preview"],
+                        payload=pa_data["payload"],
+                    )
+
             # Format result as message
             if result.success:
                 content = json.dumps(result.data)
@@ -424,6 +434,21 @@ class OmniousAgent:
         Returns:
             Assistant's response
         """
+        # Check for confirmation response first
+        if self.has_pending_action():
+            confirmation = self._is_confirmation(message)
+            if confirmation == "yes":
+                result = self.executor.execute(self.pending_action)
+                self.pending_action = None
+                if result["success"]:
+                    return f"Done! {result.get('action', 'Action completed')}. ID: {result.get('id', 'N/A')}"
+                else:
+                    return f"Sorry, there was an error: {result.get('error', 'Unknown error')}"
+            elif confirmation == "no":
+                self.pending_action = None
+                return "No problem, I won't proceed with that action. How else can I help?"
+
+        # Rest of existing chat logic
         messages = self._build_messages(message)
 
         # Add user message to history
