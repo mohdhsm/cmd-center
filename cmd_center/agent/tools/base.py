@@ -1,10 +1,31 @@
 """Base classes for agent tools."""
 
+import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Optional, Type
+from typing import Any, Coroutine, Optional, Type, TypeVar
 
 from pydantic import BaseModel
+
+T = TypeVar('T')
+
+
+def run_async(coro: Coroutine[None, None, T]) -> T:
+    """Run async code from sync context, handling existing event loops.
+
+    This is needed because Textual TUI runs its own event loop,
+    so we can't use asyncio.run() directly.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # No running loop - safe to use asyncio.run()
+        return asyncio.run(coro)
+
+    # Already in async context - use nest_asyncio
+    import nest_asyncio
+    nest_asyncio.apply()
+    return loop.run_until_complete(coro)
 
 
 @dataclass
