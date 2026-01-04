@@ -2,7 +2,8 @@
 
 import asyncio
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Coroutine, Optional, Type, TypeVar
 
 from pydantic import BaseModel
@@ -35,6 +36,20 @@ class ToolResult:
     success: bool
     data: Optional[Any] = None
     error: Optional[str] = None
+
+
+@dataclass
+class PendingAction:
+    """Represents a write action awaiting user confirmation.
+
+    Write tools return this instead of executing immediately.
+    User must confirm before the action is executed.
+    """
+
+    tool_name: str
+    preview: str  # Human-readable preview of what will happen
+    payload: dict  # Data needed to execute the action
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 def pydantic_to_openai_schema(model: Type[BaseModel]) -> dict:
