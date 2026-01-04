@@ -133,3 +133,63 @@ class TestOmniousAgentRetry:
         assert hasattr(agent, "RETRY_DELAYS")
         assert agent.MAX_RETRIES == 3
         assert len(agent.RETRY_DELAYS) == 3
+
+
+class TestAgentPersistence:
+    """Test agent persistence integration."""
+
+    def test_agent_can_save_conversation(self):
+        """Agent with persist=True can start and save a conversation."""
+        with patch("cmd_center.agent.persistence.ConversationStore") as MockStore:
+            mock_store = Mock()
+            mock_conv = Mock(id=1)
+            mock_store.create_conversation.return_value = mock_conv
+            MockStore.return_value = mock_store
+
+            agent = OmniousAgent(persist=True)
+            agent.start_new_conversation("Test Chat")
+
+            mock_store.create_conversation.assert_called_with("Test Chat")
+            assert agent.conversation_id == 1
+
+    def test_agent_saves_messages_when_persisting(self):
+        """Agent saves messages to store when persisting."""
+        with patch("cmd_center.agent.persistence.ConversationStore") as MockStore:
+            mock_store = Mock()
+            mock_conv = Mock(id=1)
+            mock_store.create_conversation.return_value = mock_conv
+            MockStore.return_value = mock_store
+
+            agent = OmniousAgent(persist=True)
+            agent.start_new_conversation()
+            agent._add_to_history("user", "Hello")
+
+            mock_store.add_message.assert_called()
+
+    def test_agent_can_load_conversation(self):
+        """Agent can load conversation and restore history."""
+        with patch("cmd_center.agent.persistence.ConversationStore") as MockStore:
+            mock_store = Mock()
+            mock_store.get_messages.return_value = [
+                Mock(role="user", content="Previous message")
+            ]
+            MockStore.return_value = mock_store
+
+            agent = OmniousAgent(persist=True)
+            agent.load_conversation(1)
+
+            assert len(agent.conversation_history) == 1
+            assert agent.conversation_history[0]["role"] == "user"
+            assert agent.conversation_history[0]["content"] == "Previous message"
+
+    def test_agent_without_persist_has_no_store(self):
+        """Agent without persist=True does not initialize a store."""
+        agent = OmniousAgent()
+        assert agent._store is None
+        assert agent.conversation_id is None
+
+    def test_load_conversation_without_persist_raises_error(self):
+        """Loading conversation without persist=True raises ValueError."""
+        agent = OmniousAgent()
+        with pytest.raises(ValueError, match="Persistence not enabled"):
+            agent.load_conversation(1)

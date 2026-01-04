@@ -3,12 +3,15 @@
 import asyncio
 import json
 from dataclasses import dataclass, field
-from typing import AsyncGenerator, Dict, List, Optional, Any
+from typing import AsyncGenerator, Dict, List, Optional, Any, TYPE_CHECKING
 
 import httpx
 
 from ...backend.integrations.config import get_config
 from ..tools.registry import ToolRegistry
+
+if TYPE_CHECKING:
+    from ..persistence import ConversationStore
 from ..tools.pipeline_tools import GetOverdueDeals, GetStuckDeals, GetDealDetails, GetDealNotes
 from ..tools.task_tools import GetTasks, GetOverdueTasks, GetPendingReminders, GetNotes
 from ..tools.employee_tools import GetEmployees, GetEmployeeDetails, GetEmployeeSkills, GetOwnerKPIs
@@ -46,14 +49,32 @@ class OmniousAgent:
     MAX_RETRIES = 3
     RETRY_DELAYS = [0.1, 0.5, 1.0]
 
-    def __init__(self):
-        """Initialize the agent with configuration, tools, and metrics."""
+    def __init__(self, persist: bool = False):
+        """Initialize the agent with configuration, tools, and metrics.
+
+        Args:
+            persist: If True, enables conversation persistence to database.
+        """
         self.config = get_config()
         self.tools = ToolRegistry()
         self.metrics = get_metrics_tracker()
         self.conversation_history: List[Dict[str, Any]] = []
 
+        # Persistence attributes
+        self._persist = persist
+        self._store: Optional["ConversationStore"] = None
+        self.conversation_id: Optional[int] = None
+
+        if self._persist:
+            self._init_store()
+
         self._register_tools()
+
+    def _init_store(self) -> None:
+        """Lazily initialize the conversation store."""
+        if self._store is None:
+            from ..persistence import ConversationStore
+            self._store = ConversationStore()
 
     def _register_tools(self) -> None:
         """Register all available tools."""
@@ -125,9 +146,52 @@ class OmniousAgent:
             "content": content
         })
 
+        # Persist message if store is enabled and conversation is active
+        if self._store is not None and self.conversation_id is not None:
+            self._store.add_message(self.conversation_id, role, content)
+
     def clear_conversation(self) -> None:
         """Clear conversation history."""
         self.conversation_history = []
+
+    def start_new_conversation(self, title: str = "New Conversation") -> int:
+        """Start a new conversation and persist it.
+
+        Args:
+            title: Title for the conversation.
+
+        Returns:
+            The ID of the newly created conversation.
+
+        Raises:
+            ValueError: If persistence is not enabled.
+        """
+        if self._store is None:
+            raise ValueError("Persistence not enabled")
+
+        conv = self._store.create_conversation(title)
+        self.conversation_id = conv.id
+        self.conversation_history = []
+        return self.conversation_id
+
+    def load_conversation(self, conversation_id: int) -> None:
+        """Load an existing conversation from the store.
+
+        Args:
+            conversation_id: The ID of the conversation to load.
+
+        Raises:
+            ValueError: If persistence is not enabled.
+        """
+        if self._store is None:
+            raise ValueError("Persistence not enabled")
+
+        self.conversation_id = conversation_id
+        messages = self._store.get_messages(conversation_id)
+        self.conversation_history = [
+            {"role": msg.role, "content": msg.content}
+            for msg in messages
+        ]
 
     async def _call_api_with_retry(
         self,
