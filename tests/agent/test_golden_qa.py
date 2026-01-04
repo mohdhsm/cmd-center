@@ -75,6 +75,7 @@ class TestGoldenToolSelection:
             # Phase 2 tools
             "get_cashflow_projection",
             "get_ceo_dashboard",
+            "get_owner_kpis",
             # Email tools
             "search_emails",
             "get_emails",
@@ -84,7 +85,7 @@ class TestGoldenToolSelection:
         for expected in expected_tools:
             assert expected in tool_names, f"Missing tool: {expected}"
 
-        assert len(tools) == 13, f"Expected 13 tools, got {len(tools)}"
+        assert len(tools) == 14, f"Expected 14 tools, got {len(tools)}"
 
     def test_tools_have_descriptions(self):
         """All tools have non-empty descriptions."""

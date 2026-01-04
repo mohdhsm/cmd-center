@@ -3,9 +3,10 @@
 from typing import Optional
 from pydantic import BaseModel, Field
 
-from .base import BaseTool, ToolResult
+from .base import BaseTool, ToolResult, run_async
 from ...backend.services.employee_service import get_employee_service
 from ...backend.services.skill_service import get_skill_service
+from ...backend.services.owner_kpi_service import get_owner_kpi_service
 from ...backend.models.employee_models import EmployeeFilters
 
 
@@ -149,6 +150,45 @@ class GetEmployeeSkills(BaseTool):
                     "skills": skills_data,
                     "skill_count": len(skills_data),
                 }
+            )
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+
+
+class GetOwnerKPIsParams(BaseModel):
+    """Parameters for get_owner_kpis tool."""
+    pass  # No parameters needed
+
+
+class GetOwnerKPIs(BaseTool):
+    """Get KPI metrics for all deal owners."""
+
+    name = "get_owner_kpis"
+    description = "Get key performance indicators for all deal owners including projects count, estimated value, and activity metrics."
+    parameters_model = GetOwnerKPIsParams
+
+    def execute(self, params: GetOwnerKPIsParams) -> ToolResult:
+        """Execute the tool."""
+        try:
+            service = get_owner_kpi_service()
+            kpis = run_async(service.get_owner_kpis())
+
+            kpis_data = [
+                {
+                    "owner": k.owner,
+                    "activities_count": k.activities_count,
+                    "projects_count": k.projects_count,
+                    "estimated_value_sar": k.estimated_value_sar,
+                    "moved_to_production_count": k.moved_to_production_count,
+                    "overdue_deals_count": k.overdue_deals_count,
+                    "stuck_deals_count": k.stuck_deals_count,
+                }
+                for k in kpis
+            ]
+
+            return ToolResult(
+                success=True,
+                data={"kpis": kpis_data, "count": len(kpis_data)}
             )
         except Exception as e:
             return ToolResult(success=False, error=str(e))

@@ -11,7 +11,7 @@ from ...backend.integrations.config import get_config
 from ..tools.registry import ToolRegistry
 from ..tools.pipeline_tools import GetOverdueDeals, GetStuckDeals, GetDealDetails, GetDealNotes
 from ..tools.task_tools import GetTasks, GetOverdueTasks
-from ..tools.employee_tools import GetEmployees, GetEmployeeDetails, GetEmployeeSkills
+from ..tools.employee_tools import GetEmployees, GetEmployeeDetails, GetEmployeeSkills, GetOwnerKPIs
 from ..tools.financial_tools import GetCashflowProjection, GetCEODashboard
 from ..tools.email_tools import SearchEmails, GetEmails
 from ..observability.metrics import MetricsTracker, get_metrics_tracker
@@ -68,6 +68,7 @@ class OmniousAgent:
         self.tools.register(GetEmployees())
         self.tools.register(GetEmployeeDetails())
         self.tools.register(GetEmployeeSkills())
+        self.tools.register(GetOwnerKPIs())
 
         # Financial tools
         self.tools.register(GetCashflowProjection())

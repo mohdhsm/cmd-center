@@ -1,11 +1,13 @@
 """Tests for employee tools including skills."""
 
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, AsyncMock
 from cmd_center.agent.tools.employee_tools import (
     GetEmployees,
     GetEmployeeDetails,
     GetEmployeeSkills,
+    GetOwnerKPIs,
+    GetOwnerKPIsParams,
 )
 
 
@@ -169,3 +171,82 @@ class TestGetEmployeeSkills:
 
         assert result.success is False
         assert "Database error" in result.error
+
+
+class TestGetOwnerKPIs:
+    """Tests for GetOwnerKPIs tool."""
+
+    def test_tool_has_correct_name(self):
+        """Tool has correct name."""
+        tool = GetOwnerKPIs()
+        assert tool.name == "get_owner_kpis"
+
+    def test_tool_has_description(self):
+        """Tool has description > 20 chars."""
+        tool = GetOwnerKPIs()
+        assert len(tool.description) > 20
+
+    @patch("cmd_center.agent.tools.employee_tools.get_owner_kpi_service")
+    def test_execute_returns_kpi_data(self, mock_get_service):
+        """Execute returns KPI data from service."""
+        mock_service = Mock()
+        mock_service.get_owner_kpis = AsyncMock(return_value=[
+            Mock(
+                owner="John Smith",
+                activities_count=25,
+                projects_count=10,
+                estimated_value_sar=500000.0,
+                moved_to_production_count=3,
+                overdue_deals_count=2,
+                stuck_deals_count=1,
+            ),
+            Mock(
+                owner="Jane Doe",
+                activities_count=30,
+                projects_count=12,
+                estimated_value_sar=750000.0,
+                moved_to_production_count=5,
+                overdue_deals_count=1,
+                stuck_deals_count=0,
+            ),
+        ])
+        mock_get_service.return_value = mock_service
+
+        tool = GetOwnerKPIs()
+        result = tool.parse_and_execute({})
+
+        assert result.success is True
+        assert "kpis" in result.data
+        assert result.data["count"] == 2
+        kpis = result.data["kpis"]
+        assert len(kpis) == 2
+        assert kpis[0]["owner"] == "John Smith"
+        assert kpis[0]["projects_count"] == 10
+        assert kpis[0]["estimated_value_sar"] == 500000.0
+
+    @patch("cmd_center.agent.tools.employee_tools.get_owner_kpi_service")
+    def test_execute_handles_exception(self, mock_get_service):
+        """Execute handles exceptions gracefully."""
+        mock_service = Mock()
+        mock_service.get_owner_kpis = AsyncMock(side_effect=Exception("Service error"))
+        mock_get_service.return_value = mock_service
+
+        tool = GetOwnerKPIs()
+        result = tool.parse_and_execute({})
+
+        assert result.success is False
+        assert "Service error" in result.error
+
+    @patch("cmd_center.agent.tools.employee_tools.get_owner_kpi_service")
+    def test_execute_returns_empty_list(self, mock_get_service):
+        """Execute handles empty KPI list."""
+        mock_service = Mock()
+        mock_service.get_owner_kpis = AsyncMock(return_value=[])
+        mock_get_service.return_value = mock_service
+
+        tool = GetOwnerKPIs()
+        result = tool.parse_and_execute({})
+
+        assert result.success is True
+        assert result.data["kpis"] == []
+        assert result.data["count"] == 0
