@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 from .base import BaseTool, ToolResult
 from ...backend.services.employee_service import get_employee_service
+from ...backend.services.skill_service import get_skill_service
 from ...backend.models.employee_models import EmployeeFilters
 
 
@@ -101,6 +102,52 @@ class GetEmployeeDetails(BaseTool):
                         "phone": employee.phone,
                         "is_active": employee.is_active,
                     }
+                }
+            )
+        except Exception as e:
+            return ToolResult(success=False, error=str(e))
+
+
+class GetEmployeeSkillsParams(BaseModel):
+    """Parameters for get_employee_skills tool."""
+    employee_id: int = Field(description="The ID of the employee")
+
+
+class GetEmployeeSkills(BaseTool):
+    """Get skills and ratings for an employee."""
+
+    name = "get_employee_skills"
+    description = "Get an employee's skill card including all skills, ratings, and categories. Use to understand team capabilities."
+    parameters_model = GetEmployeeSkillsParams
+
+    def execute(self, params: GetEmployeeSkillsParams) -> ToolResult:
+        """Execute the tool."""
+        try:
+            service = get_skill_service()
+            skill_card = service.get_employee_skill_card(params.employee_id)
+
+            if skill_card is None:
+                return ToolResult(
+                    success=False,
+                    error=f"Employee {params.employee_id} not found"
+                )
+
+            skills_data = [
+                {
+                    "skill_name": s.skill_name,
+                    "rating": s.rating,
+                    "category": s.category,
+                }
+                for s in skill_card.skills
+            ]
+
+            return ToolResult(
+                success=True,
+                data={
+                    "employee_name": skill_card.employee_name,
+                    "employee_id": params.employee_id,
+                    "skills": skills_data,
+                    "skill_count": len(skills_data),
                 }
             )
         except Exception as e:
