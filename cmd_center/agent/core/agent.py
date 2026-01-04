@@ -21,7 +21,16 @@ from ..tools.email_tools import SearchEmails, GetEmails
 from ..tools.document_tools import GetExpiringDocuments
 from ..tools.hr_tools import GetUnpaidBonuses
 from ..tools.knowledge_tools import ReadKnowledge
+from ..tools.write_tools import (
+    RequestCreateTask,
+    RequestCreateNote,
+    RequestCreateReminder,
+    RequestSendEmail,
+    RequestUpdateDeal,
+    RequestAddDealNote,
+)
 from ..observability.metrics import MetricsTracker, get_metrics_tracker
+from .executor import ActionExecutor
 from .prompts import build_system_prompt
 
 
@@ -68,6 +77,9 @@ class OmniousAgent:
 
         # Pending action for confirmation flow
         self.pending_action: Optional[PendingAction] = None
+
+        # Executor for confirmed actions
+        self.executor = ActionExecutor(actor="omnious")
 
         if self._persist:
             self._init_store()
@@ -116,6 +128,14 @@ class OmniousAgent:
 
         # Knowledge tools
         self.tools.register(ReadKnowledge())
+
+        # Write tools (require confirmation)
+        self.tools.register(RequestCreateTask())
+        self.tools.register(RequestCreateNote())
+        self.tools.register(RequestCreateReminder())
+        self.tools.register(RequestSendEmail())
+        self.tools.register(RequestUpdateDeal())
+        self.tools.register(RequestAddDealNote())
 
     def _build_messages(self, user_message: str) -> List[Dict[str, Any]]:
         """Build messages array for API call.

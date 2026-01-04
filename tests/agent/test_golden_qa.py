@@ -87,13 +87,20 @@ class TestGoldenToolSelection:
             "get_unpaid_bonuses",
             # Knowledge tools
             "read_knowledge",
+            # Phase 3 write tools
+            "request_create_task",
+            "request_create_note",
+            "request_create_reminder",
+            "request_send_email",
+            "request_update_deal",
+            "request_add_deal_note",
         ]
 
         tool_names = [t["name"] for t in tools]
         for expected in expected_tools:
             assert expected in tool_names, f"Missing tool: {expected}"
 
-        assert len(tools) == 19, f"Expected 19 tools, got {len(tools)}"
+        assert len(tools) == 25, f"Expected 25 tools, got {len(tools)}"
 
     def test_tools_have_descriptions(self):
         """All tools have non-empty descriptions."""
