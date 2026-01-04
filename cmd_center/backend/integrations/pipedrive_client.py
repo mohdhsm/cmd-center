@@ -152,7 +152,23 @@ class PipedriveClient:
         response.raise_for_status()
         return response.json()
 
-  # General deal methodd 
+    async def _put(self, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Make PUT request to Pipedrive API."""
+        params = {"api_token": self.api_token}
+        url = f"{self.api_url}/{endpoint}"
+        response = await self.client.put(url, params=params, json=data)
+        response.raise_for_status()
+        return response.json()
+
+    async def _post(self, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Make POST request to Pipedrive API."""
+        params = {"api_token": self.api_token}
+        url = f"{self.api_url}/{endpoint}"
+        response = await self.client.post(url, params=params, json=data)
+        response.raise_for_status()
+        return response.json()
+
+  # General deal methodd
     async def get_deals(
         self,
         pipeline_id: Optional[int] = None,
@@ -282,11 +298,63 @@ class PipedriveClient:
     async def get_users(self) -> List[Dict[str, Any]]:
         """Get all users."""
         data = await self._get("users")
-        
+
         if data.get("success") and data.get("data"):
             return data["data"]
-        
+
         return []
+
+    # Write operations
+    async def update_deal(
+        self,
+        deal_id: int,
+        title: Optional[str] = None,
+        status: Optional[str] = None,
+        stage_id: Optional[int] = None,
+        owner_id: Optional[int] = None,
+        value: Optional[float] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Update a deal in Pipedrive."""
+        data = {}
+        if title is not None:
+            data["title"] = title
+        if status is not None:
+            data["status"] = status
+        if stage_id is not None:
+            data["stage_id"] = stage_id
+        if owner_id is not None:
+            data["user_id"] = owner_id
+        if value is not None:
+            data["value"] = value
+
+        if not data:
+            return None
+
+        result = await self._put(f"deals/{deal_id}", data)
+
+        if result.get("success") and result.get("data"):
+            return result["data"]
+        return None
+
+    async def add_deal_note(
+        self,
+        deal_id: int,
+        content: str,
+        pinned: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        """Add a note to a deal."""
+        data = {
+            "deal_id": deal_id,
+            "content": content,
+            "pinned_to_deal_flag": 1 if pinned else 0,
+        }
+
+        result = await self._post("notes", data)
+
+        if result.get("success") and result.get("data"):
+            return result["data"]
+        return None
+
 # Utilitt function to convert date to RFC 3339 format
 
 
