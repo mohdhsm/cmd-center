@@ -1,0 +1,442 @@
+{"timestamp": "2026-01-05T12:08:20.478823+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:08:20.479048+00:00", "conversation_id": 0, "role": "assistant", "content": "Hi there!", "tokens": 0}
+{"timestamp": "2026-01-05T12:08:20.479728+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:08:20.502303+00:00", "conversation_id": 1, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:36.233186+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:36.233423+00:00", "conversation_id": 0, "role": "assistant", "content": "Hi there!", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:36.233747+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:36.276009+00:00", "conversation_id": 1, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.197034+00:00", "conversation_id": 0, "role": "user", "content": "Hi", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.200729+00:00", "conversation_id": 0, "role": "assistant", "content": "Hello!", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.201884+00:00", "conversation_id": 0, "role": "user", "content": "Hi", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.205534+00:00", "conversation_id": 0, "role": "assistant", "content": "Hello!", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.206817+00:00", "conversation_id": 0, "role": "user", "content": "Show me overdue deals", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.229761+00:00", "conversation_id": 0, "role": "assistant", "content": "There are 5 overdue deals.", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.231411+00:00", "conversation_id": 0, "role": "user", "content": "Query", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.287917+00:00", "conversation_id": 0, "role": "assistant", "content": "Done", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.464227+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.464354+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 123", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.465331+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.465404+00:00", "conversation_id": 0, "role": "assistant", "content": "Sorry, there was an error: Database connection failed", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.466438+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.466495+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.466581+00:00", "conversation_id": 0, "role": "user", "content": "y", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.466627+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.466706+00:00", "conversation_id": 0, "role": "user", "content": "confirm", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.466749+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.466821+00:00", "conversation_id": 0, "role": "user", "content": "ok", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.466857+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.466927+00:00", "conversation_id": 0, "role": "user", "content": "proceed", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.466961+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.467028+00:00", "conversation_id": 0, "role": "user", "content": "go ahead", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.467105+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.468055+00:00", "conversation_id": 0, "role": "user", "content": "no", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.468123+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.468955+00:00", "conversation_id": 0, "role": "user", "content": "no", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.469008+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.469102+00:00", "conversation_id": 0, "role": "user", "content": "n", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.469142+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.469217+00:00", "conversation_id": 0, "role": "user", "content": "cancel", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.469250+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.469321+00:00", "conversation_id": 0, "role": "user", "content": "stop", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.469354+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.469424+00:00", "conversation_id": 0, "role": "user", "content": "abort", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.469457+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.469527+00:00", "conversation_id": 0, "role": "user", "content": "never mind", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.469561+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.470431+00:00", "conversation_id": 0, "role": "user", "content": "What deals need attention?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.470501+00:00", "conversation_id": 0, "role": "assistant", "content": "Here are your deals...", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.471608+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.471678+00:00", "conversation_id": 0, "role": "assistant", "content": "I'm not sure what you're confirming.", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.472537+00:00", "conversation_id": 0, "role": "user", "content": "What else can you do?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.472598+00:00", "conversation_id": 0, "role": "assistant", "content": "Let me help you with that.", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.485199+00:00", "conversation_id": 0, "role": "user", "content": "Previous question", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:37.485321+00:00", "conversation_id": 0, "role": "assistant", "content": "Previous answer", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:44.873203+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:44.873360+00:00", "conversation_id": 0, "role": "assistant", "content": "Hi there!", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:44.873975+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:44.910692+00:00", "conversation_id": 1, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:45.820955+00:00", "conversation_id": 0, "role": "user", "content": "Hi", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:45.824716+00:00", "conversation_id": 0, "role": "assistant", "content": "Hello!", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:45.825924+00:00", "conversation_id": 0, "role": "user", "content": "Hi", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:45.829823+00:00", "conversation_id": 0, "role": "assistant", "content": "Hello!", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:45.831053+00:00", "conversation_id": 0, "role": "user", "content": "Show me overdue deals", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:45.851779+00:00", "conversation_id": 0, "role": "assistant", "content": "There are 5 overdue deals.", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:45.853344+00:00", "conversation_id": 0, "role": "user", "content": "Query", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:45.908326+00:00", "conversation_id": 0, "role": "assistant", "content": "Done", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.087588+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.087729+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 123", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.088569+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.088645+00:00", "conversation_id": 0, "role": "assistant", "content": "Sorry, there was an error: Database connection failed", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.089607+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.089672+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.089764+00:00", "conversation_id": 0, "role": "user", "content": "y", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.089813+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.089902+00:00", "conversation_id": 0, "role": "user", "content": "confirm", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.089953+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.090041+00:00", "conversation_id": 0, "role": "user", "content": "ok", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.090079+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.090159+00:00", "conversation_id": 0, "role": "user", "content": "proceed", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.090195+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.090274+00:00", "conversation_id": 0, "role": "user", "content": "go ahead", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.090311+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.091101+00:00", "conversation_id": 0, "role": "user", "content": "no", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.091145+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.091896+00:00", "conversation_id": 0, "role": "user", "content": "no", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.091939+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.092021+00:00", "conversation_id": 0, "role": "user", "content": "n", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.092055+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.092128+00:00", "conversation_id": 0, "role": "user", "content": "cancel", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.092190+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.092265+00:00", "conversation_id": 0, "role": "user", "content": "stop", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.092299+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.092368+00:00", "conversation_id": 0, "role": "user", "content": "abort", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.092405+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.092476+00:00", "conversation_id": 0, "role": "user", "content": "never mind", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.092509+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.093302+00:00", "conversation_id": 0, "role": "user", "content": "What deals need attention?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.093369+00:00", "conversation_id": 0, "role": "assistant", "content": "Here are your deals...", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.094349+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.094413+00:00", "conversation_id": 0, "role": "assistant", "content": "I'm not sure what you're confirming.", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.095201+00:00", "conversation_id": 0, "role": "user", "content": "What else can you do?", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.095265+00:00", "conversation_id": 0, "role": "assistant", "content": "Let me help you with that.", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.107106+00:00", "conversation_id": 0, "role": "user", "content": "Previous question", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:46.107187+00:00", "conversation_id": 0, "role": "assistant", "content": "Previous answer", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:50.019190+00:00", "conversation_id": 0, "role": "user", "content": "Previous message", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:50.019285+00:00", "conversation_id": 0, "role": "assistant", "content": "Previous response", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:50.019608+00:00", "conversation_id": 0, "role": "user", "content": "Q1", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:50.019655+00:00", "conversation_id": 0, "role": "assistant", "content": "A1", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:50.019701+00:00", "conversation_id": 0, "role": "user", "content": "Q2", "tokens": 0}
+{"timestamp": "2026-01-05T12:13:50.019744+00:00", "conversation_id": 0, "role": "assistant", "content": "A2", "tokens": 0}
+{"timestamp": "2026-01-05T12:17:10.054017+00:00", "conversation_id": 0, "role": "user", "content": "Hello world", "tokens": 0}
+{"timestamp": "2026-01-05T12:17:10.056617+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:17:10.058939+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:17:59.155950+00:00", "conversation_id": 0, "role": "user", "content": "Hello world", "tokens": 0}
+{"timestamp": "2026-01-05T12:17:59.156894+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:17:59.157833+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:18:06.627449+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:18:06.628088+00:00", "conversation_id": 0, "role": "assistant", "content": "Hi there!", "tokens": 0}
+{"timestamp": "2026-01-05T12:18:06.628533+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:18:06.650210+00:00", "conversation_id": 1, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:20:12.552145+00:00", "conversation_id": 0, "role": "user", "content": "Hello world", "tokens": 0}
+{"timestamp": "2026-01-05T12:20:12.552864+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:20:12.553805+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:48.423378+00:00", "conversation_id": 0, "role": "user", "content": "Hello world", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:48.424094+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:48.425013+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:48.428515+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:48.428586+00:00", "conversation_id": 0, "role": "assistant", "content": "Hi there!", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:48.428913+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:48.471763+00:00", "conversation_id": 1, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.376042+00:00", "conversation_id": 0, "role": "user", "content": "Hi", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.379854+00:00", "conversation_id": 0, "role": "assistant", "content": "Hello!", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.380952+00:00", "conversation_id": 0, "role": "user", "content": "Hi", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.384760+00:00", "conversation_id": 0, "role": "assistant", "content": "Hello!", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.385910+00:00", "conversation_id": 0, "role": "user", "content": "Show me overdue deals", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.406710+00:00", "conversation_id": 0, "role": "assistant", "content": "There are 5 overdue deals.", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.408388+00:00", "conversation_id": 0, "role": "user", "content": "Query", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.462432+00:00", "conversation_id": 0, "role": "assistant", "content": "Done", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.636882+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.637055+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 123", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.638102+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.638171+00:00", "conversation_id": 0, "role": "assistant", "content": "Sorry, there was an error: Database connection failed", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.639628+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.639723+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.639829+00:00", "conversation_id": 0, "role": "user", "content": "y", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.639879+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.639969+00:00", "conversation_id": 0, "role": "user", "content": "confirm", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.640011+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.640096+00:00", "conversation_id": 0, "role": "user", "content": "ok", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.640135+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.640271+00:00", "conversation_id": 0, "role": "user", "content": "proceed", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.640308+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.640394+00:00", "conversation_id": 0, "role": "user", "content": "go ahead", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.640433+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.641295+00:00", "conversation_id": 0, "role": "user", "content": "no", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.641353+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.642136+00:00", "conversation_id": 0, "role": "user", "content": "no", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.642186+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.642268+00:00", "conversation_id": 0, "role": "user", "content": "n", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.642311+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.642382+00:00", "conversation_id": 0, "role": "user", "content": "cancel", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.642414+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.642480+00:00", "conversation_id": 0, "role": "user", "content": "stop", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.642511+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.642579+00:00", "conversation_id": 0, "role": "user", "content": "abort", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.642613+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.642677+00:00", "conversation_id": 0, "role": "user", "content": "never mind", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.642709+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.643503+00:00", "conversation_id": 0, "role": "user", "content": "What deals need attention?", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.643562+00:00", "conversation_id": 0, "role": "assistant", "content": "Here are your deals...", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.644558+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.644617+00:00", "conversation_id": 0, "role": "assistant", "content": "I'm not sure what you're confirming.", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.645392+00:00", "conversation_id": 0, "role": "user", "content": "What else can you do?", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.645458+00:00", "conversation_id": 0, "role": "assistant", "content": "Let me help you with that.", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.657333+00:00", "conversation_id": 0, "role": "user", "content": "Previous question", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:49.657436+00:00", "conversation_id": 0, "role": "assistant", "content": "Previous answer", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:55.521799+00:00", "conversation_id": 0, "role": "user", "content": "Previous message", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:55.521916+00:00", "conversation_id": 0, "role": "assistant", "content": "Previous response", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:55.522286+00:00", "conversation_id": 0, "role": "user", "content": "Q1", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:55.522339+00:00", "conversation_id": 0, "role": "assistant", "content": "A1", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:55.522382+00:00", "conversation_id": 0, "role": "user", "content": "Q2", "tokens": 0}
+{"timestamp": "2026-01-05T12:22:55.522423+00:00", "conversation_id": 0, "role": "assistant", "content": "A2", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:05.907878+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:05.963200+00:00", "conversation_id": 0, "role": "user", "content": "Get overdue deals", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:37.854789+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:37.858805+00:00", "conversation_id": 0, "role": "assistant", "content": "I'm sorry, I ran into an unexpected issue. Let me know if you'd like to try again or ask something different.", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:37.860168+00:00", "conversation_id": 0, "role": "user", "content": "Get overdue deals", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:37.863760+00:00", "conversation_id": 0, "role": "assistant", "content": "I encountered an error with the tool.", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:44.876715+00:00", "conversation_id": 0, "role": "user", "content": "Hello world", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:44.877346+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:44.878568+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:44.881846+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:44.881911+00:00", "conversation_id": 0, "role": "assistant", "content": "Hi there!", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:44.882218+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:44.917918+00:00", "conversation_id": 1, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:44.919776+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:44.923759+00:00", "conversation_id": 0, "role": "assistant", "content": "I'm sorry, I ran into an unexpected issue. Let me know if you'd like to try again or ask something different.", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:44.925062+00:00", "conversation_id": 0, "role": "user", "content": "Get overdue deals", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:44.928501+00:00", "conversation_id": 0, "role": "assistant", "content": "I encountered an error with the tool.", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:45.830513+00:00", "conversation_id": 0, "role": "user", "content": "Hi", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:45.834245+00:00", "conversation_id": 0, "role": "assistant", "content": "Hello!", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:45.835739+00:00", "conversation_id": 0, "role": "user", "content": "Hi", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:45.839811+00:00", "conversation_id": 0, "role": "assistant", "content": "Hello!", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:45.841117+00:00", "conversation_id": 0, "role": "user", "content": "Show me overdue deals", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:45.862879+00:00", "conversation_id": 0, "role": "assistant", "content": "There are 5 overdue deals.", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:45.864617+00:00", "conversation_id": 0, "role": "user", "content": "Query", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:45.916826+00:00", "conversation_id": 0, "role": "assistant", "content": "Done", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.097277+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.097499+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 123", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.098597+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.098686+00:00", "conversation_id": 0, "role": "assistant", "content": "Sorry, there was an error: Database connection failed", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.099711+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.099780+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.099889+00:00", "conversation_id": 0, "role": "user", "content": "y", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.099943+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.100034+00:00", "conversation_id": 0, "role": "user", "content": "confirm", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.100089+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.100177+00:00", "conversation_id": 0, "role": "user", "content": "ok", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.100235+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.100316+00:00", "conversation_id": 0, "role": "user", "content": "proceed", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.100361+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.100445+00:00", "conversation_id": 0, "role": "user", "content": "go ahead", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.100485+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.101323+00:00", "conversation_id": 0, "role": "user", "content": "no", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.101392+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.102191+00:00", "conversation_id": 0, "role": "user", "content": "no", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.102240+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.102328+00:00", "conversation_id": 0, "role": "user", "content": "n", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.102370+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.102446+00:00", "conversation_id": 0, "role": "user", "content": "cancel", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.102481+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.102551+00:00", "conversation_id": 0, "role": "user", "content": "stop", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.102589+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.102659+00:00", "conversation_id": 0, "role": "user", "content": "abort", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.102694+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.102766+00:00", "conversation_id": 0, "role": "user", "content": "never mind", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.102846+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.103635+00:00", "conversation_id": 0, "role": "user", "content": "What deals need attention?", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.103697+00:00", "conversation_id": 0, "role": "assistant", "content": "Here are your deals...", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.104714+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.104776+00:00", "conversation_id": 0, "role": "assistant", "content": "I'm not sure what you're confirming.", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.105551+00:00", "conversation_id": 0, "role": "user", "content": "What else can you do?", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.105606+00:00", "conversation_id": 0, "role": "assistant", "content": "Let me help you with that.", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.117609+00:00", "conversation_id": 0, "role": "user", "content": "Previous question", "tokens": 0}
+{"timestamp": "2026-01-05T12:26:46.117684+00:00", "conversation_id": 0, "role": "assistant", "content": "Previous answer", "tokens": 0}
+{"timestamp": "2026-01-05T12:27:00.353454+00:00", "conversation_id": 0, "role": "user", "content": "Previous message", "tokens": 0}
+{"timestamp": "2026-01-05T12:27:00.353577+00:00", "conversation_id": 0, "role": "assistant", "content": "Previous response", "tokens": 0}
+{"timestamp": "2026-01-05T12:27:00.353913+00:00", "conversation_id": 0, "role": "user", "content": "Q1", "tokens": 0}
+{"timestamp": "2026-01-05T12:27:00.353968+00:00", "conversation_id": 0, "role": "assistant", "content": "A1", "tokens": 0}
+{"timestamp": "2026-01-05T12:27:00.354010+00:00", "conversation_id": 0, "role": "user", "content": "Q2", "tokens": 0}
+{"timestamp": "2026-01-05T12:27:00.354046+00:00", "conversation_id": 0, "role": "assistant", "content": "A2", "tokens": 0}
+{"timestamp": "2026-01-05T12:29:21.574727+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:29:21.578815+00:00", "conversation_id": 0, "role": "assistant", "content": "I'm sorry, I ran into an unexpected issue. Let me know if you'd like to try again or ask something different.", "tokens": 0}
+{"timestamp": "2026-01-05T12:29:21.580217+00:00", "conversation_id": 0, "role": "user", "content": "Get overdue deals", "tokens": 0}
+{"timestamp": "2026-01-05T12:29:21.583794+00:00", "conversation_id": 0, "role": "assistant", "content": "I encountered an error with the tool.", "tokens": 0}
+{"timestamp": "2026-01-05T12:30:09.987375+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:30:09.992315+00:00", "conversation_id": 0, "role": "assistant", "content": "I'm sorry, I ran into an unexpected issue. Let me know if you'd like to try again or ask something different.", "tokens": 0}
+{"timestamp": "2026-01-05T12:30:09.993779+00:00", "conversation_id": 0, "role": "user", "content": "Get overdue deals", "tokens": 0}
+{"timestamp": "2026-01-05T12:30:09.997427+00:00", "conversation_id": 0, "role": "assistant", "content": "I encountered an error with the tool.", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:08.309077+00:00", "conversation_id": 0, "role": "user", "content": "Hello world", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:08.309891+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:08.310833+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:08.314016+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:08.314073+00:00", "conversation_id": 0, "role": "assistant", "content": "Hi there!", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:08.314375+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:08.341302+00:00", "conversation_id": 1, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:08.343177+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:08.347247+00:00", "conversation_id": 0, "role": "assistant", "content": "I'm sorry, I ran into an unexpected issue. Let me know if you'd like to try again or ask something different.", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:08.348597+00:00", "conversation_id": 0, "role": "user", "content": "Get overdue deals", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:08.352232+00:00", "conversation_id": 0, "role": "assistant", "content": "I encountered an error with the tool.", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.256813+00:00", "conversation_id": 0, "role": "user", "content": "Hi", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.260395+00:00", "conversation_id": 0, "role": "assistant", "content": "Hello!", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.261621+00:00", "conversation_id": 0, "role": "user", "content": "Hi", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.265683+00:00", "conversation_id": 0, "role": "assistant", "content": "Hello!", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.267405+00:00", "conversation_id": 0, "role": "user", "content": "Show me overdue deals", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.290051+00:00", "conversation_id": 0, "role": "assistant", "content": "There are 5 overdue deals.", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.291862+00:00", "conversation_id": 0, "role": "user", "content": "Query", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.354427+00:00", "conversation_id": 0, "role": "assistant", "content": "Done", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.527802+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.527916+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 123", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.528839+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.528917+00:00", "conversation_id": 0, "role": "assistant", "content": "Sorry, there was an error: Database connection failed", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.529940+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.530009+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.530098+00:00", "conversation_id": 0, "role": "user", "content": "y", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.530143+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.530221+00:00", "conversation_id": 0, "role": "user", "content": "confirm", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.530261+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.530334+00:00", "conversation_id": 0, "role": "user", "content": "ok", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.530373+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.530446+00:00", "conversation_id": 0, "role": "user", "content": "proceed", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.530482+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.530551+00:00", "conversation_id": 0, "role": "user", "content": "go ahead", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.530587+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.531382+00:00", "conversation_id": 0, "role": "user", "content": "no", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.531610+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.532397+00:00", "conversation_id": 0, "role": "user", "content": "no", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.532454+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.532542+00:00", "conversation_id": 0, "role": "user", "content": "n", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.532581+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.532657+00:00", "conversation_id": 0, "role": "user", "content": "cancel", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.532692+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.532764+00:00", "conversation_id": 0, "role": "user", "content": "stop", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.532798+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.532867+00:00", "conversation_id": 0, "role": "user", "content": "abort", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.532901+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.532970+00:00", "conversation_id": 0, "role": "user", "content": "never mind", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.533003+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.533810+00:00", "conversation_id": 0, "role": "user", "content": "What deals need attention?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.533874+00:00", "conversation_id": 0, "role": "assistant", "content": "Here are your deals...", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.534903+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.534973+00:00", "conversation_id": 0, "role": "assistant", "content": "I'm not sure what you're confirming.", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.535792+00:00", "conversation_id": 0, "role": "user", "content": "What else can you do?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.535855+00:00", "conversation_id": 0, "role": "assistant", "content": "Let me help you with that.", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.548269+00:00", "conversation_id": 0, "role": "user", "content": "Previous question", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:09.548426+00:00", "conversation_id": 0, "role": "assistant", "content": "Previous answer", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:19.234632+00:00", "conversation_id": 0, "role": "user", "content": "Hello world", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:19.235315+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:19.236723+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:19.239920+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:19.240000+00:00", "conversation_id": 0, "role": "assistant", "content": "Hi there!", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:19.240310+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:19.262682+00:00", "conversation_id": 1, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:19.265147+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:19.269318+00:00", "conversation_id": 0, "role": "assistant", "content": "I'm sorry, I ran into an unexpected issue. Let me know if you'd like to try again or ask something different.", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:19.270705+00:00", "conversation_id": 0, "role": "user", "content": "Get overdue deals", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:19.274424+00:00", "conversation_id": 0, "role": "assistant", "content": "I encountered an error with the tool.", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.188909+00:00", "conversation_id": 0, "role": "user", "content": "Hi", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.192620+00:00", "conversation_id": 0, "role": "assistant", "content": "Hello!", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.193770+00:00", "conversation_id": 0, "role": "user", "content": "Hi", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.197490+00:00", "conversation_id": 0, "role": "assistant", "content": "Hello!", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.198662+00:00", "conversation_id": 0, "role": "user", "content": "Show me overdue deals", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.223772+00:00", "conversation_id": 0, "role": "assistant", "content": "There are 5 overdue deals.", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.225385+00:00", "conversation_id": 0, "role": "user", "content": "Query", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.280287+00:00", "conversation_id": 0, "role": "assistant", "content": "Done", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.461312+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.461437+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 123", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.462422+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.462514+00:00", "conversation_id": 0, "role": "assistant", "content": "Sorry, there was an error: Database connection failed", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.463584+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.463660+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.463757+00:00", "conversation_id": 0, "role": "user", "content": "y", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.463814+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.463898+00:00", "conversation_id": 0, "role": "user", "content": "confirm", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.463947+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.464026+00:00", "conversation_id": 0, "role": "user", "content": "ok", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.464071+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.464147+00:00", "conversation_id": 0, "role": "user", "content": "proceed", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.464190+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.464265+00:00", "conversation_id": 0, "role": "user", "content": "go ahead", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.464308+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.465129+00:00", "conversation_id": 0, "role": "user", "content": "no", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.465179+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.465995+00:00", "conversation_id": 0, "role": "user", "content": "no", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.466038+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.466114+00:00", "conversation_id": 0, "role": "user", "content": "n", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.466149+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.466218+00:00", "conversation_id": 0, "role": "user", "content": "cancel", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.466249+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.466322+00:00", "conversation_id": 0, "role": "user", "content": "stop", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.466356+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.466422+00:00", "conversation_id": 0, "role": "user", "content": "abort", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.466456+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.466524+00:00", "conversation_id": 0, "role": "user", "content": "never mind", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.466553+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.467374+00:00", "conversation_id": 0, "role": "user", "content": "What deals need attention?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.467434+00:00", "conversation_id": 0, "role": "assistant", "content": "Here are your deals...", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.468459+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.468521+00:00", "conversation_id": 0, "role": "assistant", "content": "I'm not sure what you're confirming.", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.469334+00:00", "conversation_id": 0, "role": "user", "content": "What else can you do?", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.469392+00:00", "conversation_id": 0, "role": "assistant", "content": "Let me help you with that.", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.481357+00:00", "conversation_id": 0, "role": "user", "content": "Previous question", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:20.481430+00:00", "conversation_id": 0, "role": "assistant", "content": "Previous answer", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:24.267754+00:00", "conversation_id": 0, "role": "user", "content": "Previous message", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:24.267907+00:00", "conversation_id": 0, "role": "assistant", "content": "Previous response", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:24.268274+00:00", "conversation_id": 0, "role": "user", "content": "Q1", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:24.268325+00:00", "conversation_id": 0, "role": "assistant", "content": "A1", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:24.268367+00:00", "conversation_id": 0, "role": "user", "content": "Q2", "tokens": 0}
+{"timestamp": "2026-01-05T12:40:24.268405+00:00", "conversation_id": 0, "role": "assistant", "content": "A2", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:25.701221+00:00", "conversation_id": 0, "role": "user", "content": "Hello world", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:25.702089+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:25.703084+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:25.706259+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:25.706322+00:00", "conversation_id": 0, "role": "assistant", "content": "Hi there!", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:25.706619+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:25.733228+00:00", "conversation_id": 1, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:25.734985+00:00", "conversation_id": 0, "role": "user", "content": "Hello", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:25.738811+00:00", "conversation_id": 0, "role": "assistant", "content": "I'm sorry, I ran into an unexpected issue. Let me know if you'd like to try again or ask something different.", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:25.740068+00:00", "conversation_id": 0, "role": "user", "content": "Get overdue deals", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:25.743523+00:00", "conversation_id": 0, "role": "assistant", "content": "I encountered an error with the tool.", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.658136+00:00", "conversation_id": 0, "role": "user", "content": "Hi", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.661936+00:00", "conversation_id": 0, "role": "assistant", "content": "Hello!", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.663170+00:00", "conversation_id": 0, "role": "user", "content": "Hi", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.667364+00:00", "conversation_id": 0, "role": "assistant", "content": "Hello!", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.668793+00:00", "conversation_id": 0, "role": "user", "content": "Show me overdue deals", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.690670+00:00", "conversation_id": 0, "role": "assistant", "content": "There are 5 overdue deals.", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.692314+00:00", "conversation_id": 0, "role": "user", "content": "Query", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.746572+00:00", "conversation_id": 0, "role": "assistant", "content": "Done", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.920253+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.920404+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 123", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.921221+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.921309+00:00", "conversation_id": 0, "role": "assistant", "content": "Sorry, there was an error: Database connection failed", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.922279+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.922356+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.922452+00:00", "conversation_id": 0, "role": "user", "content": "y", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.922514+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.922596+00:00", "conversation_id": 0, "role": "user", "content": "confirm", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.922641+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.922713+00:00", "conversation_id": 0, "role": "user", "content": "ok", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.922758+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.922841+00:00", "conversation_id": 0, "role": "user", "content": "proceed", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.922951+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.923034+00:00", "conversation_id": 0, "role": "user", "content": "go ahead", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.923089+00:00", "conversation_id": 0, "role": "assistant", "content": "Done! Action completed successfully. ID: 1", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.923881+00:00", "conversation_id": 0, "role": "user", "content": "no", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.923938+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.924691+00:00", "conversation_id": 0, "role": "user", "content": "no", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.924745+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.924823+00:00", "conversation_id": 0, "role": "user", "content": "n", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.924859+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.924933+00:00", "conversation_id": 0, "role": "user", "content": "cancel", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.924968+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.925036+00:00", "conversation_id": 0, "role": "user", "content": "stop", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.925069+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.925138+00:00", "conversation_id": 0, "role": "user", "content": "abort", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.925171+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.925237+00:00", "conversation_id": 0, "role": "user", "content": "never mind", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.925270+00:00", "conversation_id": 0, "role": "assistant", "content": "No problem, I won't proceed with that action. How else can I help?", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.926202+00:00", "conversation_id": 0, "role": "user", "content": "What deals need attention?", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.926293+00:00", "conversation_id": 0, "role": "assistant", "content": "Here are your deals...", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.927335+00:00", "conversation_id": 0, "role": "user", "content": "yes", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.927399+00:00", "conversation_id": 0, "role": "assistant", "content": "I'm not sure what you're confirming.", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.928188+00:00", "conversation_id": 0, "role": "user", "content": "What else can you do?", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.928249+00:00", "conversation_id": 0, "role": "assistant", "content": "Let me help you with that.", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.939687+00:00", "conversation_id": 0, "role": "user", "content": "Previous question", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:26.939775+00:00", "conversation_id": 0, "role": "assistant", "content": "Previous answer", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:31.185944+00:00", "conversation_id": 0, "role": "user", "content": "Previous message", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:31.186089+00:00", "conversation_id": 0, "role": "assistant", "content": "Previous response", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:31.186411+00:00", "conversation_id": 0, "role": "user", "content": "Q1", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:31.186507+00:00", "conversation_id": 0, "role": "assistant", "content": "A1", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:31.186558+00:00", "conversation_id": 0, "role": "user", "content": "Q2", "tokens": 0}
+{"timestamp": "2026-01-05T12:41:31.186607+00:00", "conversation_id": 0, "role": "assistant", "content": "A2", "tokens": 0}
