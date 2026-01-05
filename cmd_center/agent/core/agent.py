@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import AsyncGenerator, Dict, List, Optional, Any, TYPE_CHECKING
 
 from .context import ContextManager
-from .errors import format_error_response, ToolExecutionError
+from .errors import format_error_response
 
 import httpx
 
