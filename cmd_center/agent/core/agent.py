@@ -30,6 +30,7 @@ from ..tools.write_tools import (
     RequestAddDealNote,
 )
 from ..observability.metrics import MetricsTracker, get_metrics_tracker
+from ..observability.logger import get_conversation_logger
 from .executor import ActionExecutor
 from .prompts import build_system_prompt
 
@@ -68,6 +69,7 @@ class OmniousAgent:
         self.config = get_config()
         self.tools = ToolRegistry()
         self.metrics = get_metrics_tracker()
+        self.file_logger = get_conversation_logger()
         self.conversation_history: List[Dict[str, Any]] = []
 
         # Persistence attributes
@@ -158,12 +160,18 @@ class OmniousAgent:
 
         return messages
 
-    def _add_to_history(self, role: str, content: str) -> None:
+    def _add_to_history(
+        self,
+        role: str,
+        content: str,
+        tools_used: Optional[List[str]] = None
+    ) -> None:
         """Add a message to conversation history.
 
         Args:
             role: Message role (user, assistant)
             content: Message content
+            tools_used: Optional list of tools used in this message
         """
         self.conversation_history.append({
             "role": role,
@@ -173,6 +181,15 @@ class OmniousAgent:
         # Persist message if store is enabled and conversation is active
         if self._store is not None and self.conversation_id is not None:
             self._store.add_message(self.conversation_id, role, content)
+
+        # Log to file
+        self.file_logger.log_message(
+            conversation_id=self.conversation_id or 0,
+            role=role,
+            content=content,
+            tokens=0,
+            tools_used=tools_used,
+        )
 
     def clear_conversation(self) -> None:
         """Clear conversation history."""
