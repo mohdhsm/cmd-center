@@ -5,6 +5,8 @@ import json
 from dataclasses import dataclass, field
 from typing import AsyncGenerator, Dict, List, Optional, Any, TYPE_CHECKING
 
+from .context import ContextManager
+
 import httpx
 
 from ...backend.integrations.config import get_config
@@ -82,6 +84,9 @@ class OmniousAgent:
 
         # Executor for confirmed actions
         self.executor = ActionExecutor(actor="omnious")
+
+        # Context manager for token tracking
+        self.context_manager = ContextManager()
 
         if self._persist:
             self._init_store()
@@ -191,9 +196,21 @@ class OmniousAgent:
             tools_used=tools_used,
         )
 
+        # Track context tokens
+        self.context_manager.add_message(role, content)
+
     def clear_conversation(self) -> None:
         """Clear conversation history."""
         self.conversation_history = []
+        self.context_manager.clear()
+
+    def get_context_warning(self) -> Optional[str]:
+        """Get context limit warning if near limit."""
+        return self.context_manager.get_warning()
+
+    def get_context_usage(self) -> str:
+        """Get context usage summary."""
+        return self.context_manager.get_usage_summary()
 
     def has_pending_action(self) -> bool:
         """Check if there's a pending action awaiting confirmation."""
