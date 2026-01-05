@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import AsyncGenerator, Dict, List, Optional, Any, TYPE_CHECKING
 
 from .context import ContextManager
+from .errors import format_error_response, ToolExecutionError
 
 import httpx
 
@@ -373,23 +374,26 @@ class OmniousAgent:
                 arguments = {}
 
             # Execute the tool
-            result = self.tools.execute(tool_name, arguments)
+            try:
+                result = self.tools.execute(tool_name, arguments)
 
-            # Check if tool returned a pending action
-            if result.success and isinstance(result.data, dict):
-                if "pending_action" in result.data:
-                    pa_data = result.data["pending_action"]
-                    self.pending_action = PendingAction(
-                        tool_name=pa_data["tool_name"],
-                        preview=pa_data["preview"],
-                        payload=pa_data["payload"],
-                    )
+                # Check if tool returned a pending action
+                if result.success and isinstance(result.data, dict):
+                    if "pending_action" in result.data:
+                        pa_data = result.data["pending_action"]
+                        self.pending_action = PendingAction(
+                            tool_name=pa_data["tool_name"],
+                            preview=pa_data["preview"],
+                            payload=pa_data["payload"],
+                        )
 
-            # Format result as message
-            if result.success:
-                content = json.dumps(result.data)
-            else:
-                content = json.dumps({"error": result.error})
+                # Format result as message
+                if result.success:
+                    content = json.dumps(result.data)
+                else:
+                    content = json.dumps({"error": result.error})
+            except Exception as e:
+                content = json.dumps({"error": f"Tool execution failed: {str(e)}"})
 
             results.append({
                 "role": "tool",
@@ -507,18 +511,23 @@ class OmniousAgent:
                 return response
 
         # Rest of existing chat logic
-        messages = self._build_messages(message)
+        try:
+            messages = self._build_messages(message)
 
-        # Add user message to history
-        self._add_to_history("user", message)
+            # Add user message to history
+            self._add_to_history("user", message)
 
-        # Call LLM with tool handling
-        content = await self._call_llm_with_tools(messages)
+            # Call LLM with tool handling
+            content = await self._call_llm_with_tools(messages)
 
-        # Add to history
-        self._add_to_history("assistant", content)
+            # Add to history
+            self._add_to_history("assistant", content)
 
-        return content
+            return content
+        except Exception as e:
+            error_response = format_error_response(e)
+            self._add_to_history("assistant", error_response)
+            return error_response
 
     async def chat_stream(self, message: str) -> AsyncGenerator[StreamChunk, None]:
         """Send a message and stream the response.
